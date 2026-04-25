@@ -45,4 +45,14 @@ The annotation database should contain a \code{users} table with columns:
 Requires packages: shiny, DBI, sodium, blastula, DT
 }
 
-\keyword{internal}
+\examples{
+\dontrun{
+# In a Shiny app
+shiny::moduleServer("admin_panel", adminPanelServer,
+  args = list(
+    conAnn = con_annotation,
+    pass = Sys.getenv("SMTP_PASS")
+  )
+)
+}
+}

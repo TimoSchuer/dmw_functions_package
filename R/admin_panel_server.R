@@ -28,7 +28,18 @@
 #' @section Dependencies:
 #' Requires packages: shiny, DBI, sodium, blastula, DT
 #'
-#' @keywords internal
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # In a Shiny app
+#' shiny::moduleServer("admin_panel", adminPanelServer,
+#'   args = list(
+#'     conAnn = con_annotation,
+#'     pass = Sys.getenv("SMTP_PASS")
+#'   )
+#' )
+#' }
 adminPanelServer <- function(id, conAnn, pass = Sys.getenv("STMP_PASS")) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
