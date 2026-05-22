@@ -6,14 +6,14 @@ library(sf)
 create_voronoi_polygons <- function(points_sf) {
   # Voronoi-Diagramm erstellen
   voronoi <- st_voronoi(st_union(points_sf))
-  
+
   # Die einzelnen Polygone der Voronoi-Zerlegung extrahieren
   # st_voronoi gibt eine sfc zurück
   voronoi_sf <- st_sf(
     id = seq_along(voronoi),
     geometry = voronoi
   )
-  
+
   return(voronoi_sf)
 }
 
@@ -46,30 +46,30 @@ for (region in wenker_regions) {
     cat("File not found:", region$file, "\n")
     next
   }
-  
+
   # Wenker-Orte laden
   points <- st_read(region$file, quiet = TRUE)
-  
+
   # Voronoi-Polygone erstellen
   voronoi_data <- create_voronoi_polygons(points)
-  
+
   # Dynamisch zuweisen
   assign(region$name, voronoi_data)
-  
+
   # Als GeoJSON speichern
   geojson_path <- file.path(
     data_dir,
     paste0(region$name, ".geojson")
   )
   st_write(voronoi_data, geojson_path, delete_dsn = TRUE, quiet = TRUE)
-  
+
   # Als .rda Datei speichern
   rda_path <- file.path(
     data_dir,
     paste0(region$name, ".rda")
   )
   save(list = region$name, file = rda_path, envir = environment())
-  
+
   cat("Created and saved:", region$name, "\n")
 }
 
@@ -81,17 +81,23 @@ all_wenker_files <- c(
   file.path(data_dir, "Wenker-Orte_Siegen.geojson")
 )
 
-all_points <- do.call(rbind, lapply(all_wenker_files, function(file) {
-  st_read(file, quiet = TRUE)
-}))
+all_points <- do.call(
+  rbind,
+  lapply(all_wenker_files, function(file) {
+    st_read(file, quiet = TRUE)
+  })
+)
 
 # Voronoi-Zergliederung für alle Punkte
 Wenkerorte_Voronoi <- create_voronoi_polygons(all_points)
 
 # Speichern
-st_write(Wenkerorte_Voronoi, 
-         file.path(data_dir, "Wenkerorte_Voronoi.geojson"),
-         delete_dsn = TRUE, quiet = TRUE)
+st_write(
+  Wenkerorte_Voronoi,
+  file.path(data_dir, "Wenkerorte_Voronoi.geojson"),
+  delete_dsn = TRUE,
+  quiet = TRUE
+)
 
 # Als .rda Datei speichern
 save(Wenkerorte_Voronoi, file = file.path(data_dir, "Wenkerorte_Voronoi.rda"))
