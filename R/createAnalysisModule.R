@@ -272,7 +272,10 @@ createAnalysis <- function(
             footer = NULL,
             size = "m",
             shiny::tagList(
-              shiny::textInput(shiny::NS(id, "analysisName"), "Name der Analyse"),
+              shiny::textInput(
+                shiny::NS(id, "analysisName"),
+                "Name der Analyse"
+              ),
               shiny::textInput(
                 shiny::NS(id, "analysisCategory"),
                 "Kategorie der Analyse (mit Komma getrennt)"
@@ -305,7 +308,10 @@ createAnalysis <- function(
           return()
         }
         if (is.null(input$task) || input$task == "") {
-          shiny::showNotification("Bitte eine Aufgabe auswählen.", type = "error")
+          shiny::showNotification(
+            "Bitte eine Aufgabe auswählen.",
+            type = "error"
+          )
           return()
         }
         tryCatch(
@@ -847,7 +853,10 @@ createAnalysis <- function(
               "Kategorie auswählen",
               choices = cats
             ),
-            shiny::textInput(shiny::NS(id, "newRenameCategoryName"), "Neuer Name"),
+            shiny::textInput(
+              shiny::NS(id, "newRenameCategoryName"),
+              "Neuer Name"
+            ),
             shiny::actionButton(
               shiny::NS(id, "confirmRenameCategory"),
               "Umbenennen",
@@ -882,7 +891,9 @@ createAnalysis <- function(
               "Kategorie auswählen",
               choices = cats
             ),
-            shiny::p("Warnung: Diese Aktion kann nicht rückgängig gemacht werden."),
+            shiny::p(
+              "Warnung: Diese Aktion kann nicht rückgängig gemacht werden."
+            ),
             shiny::actionButton(
               shiny::NS(id, "confirmRemoveCategory"),
               "Löschen",
@@ -1130,7 +1141,7 @@ createAnalysis <- function(
       shiny::bindEvent(input$addFilter)
 
     shiny::observe({
-      shiny::browseURL("https://ipa.typeit.org/full/")
+      browseURL("https://ipa.typeit.org/full/")
     }) |>
       shiny::bindEvent(input$IPAHelper)
 
