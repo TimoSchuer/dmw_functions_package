@@ -312,30 +312,35 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
     })
 
     shiny::observe({
-      shiny::req(analysisData())
-      cats <- unique(analysisData()$category)
+      data <- analysisData()
+      shiny::req(nrow(data) > 0)
+
+      genders    <- unique(data$gender)
+      ages       <- unique(data$Altersklasse)
+      cats       <- unique(data$category)
+
       shiny::updateSelectizeInput(
         session = session,
         "Geschlecht",
-        choices = unique(analysisData()$gender),
-        selected = unique(analysisData()$gender)
+        choices  = genders,
+        selected = genders
       )
       shiny::updateSelectizeInput(
         session = session,
         "Altersklasse",
-        choices = unique(analysisData()$Altersklasse),
-        selected = unique(analysisData()$Altersklasse)
+        choices  = ages,
+        selected = ages
       )
       shiny::updateSelectizeInput(
         session = session,
         "selectedVar",
-        choices = cats,
+        choices  = cats,
         selected = cats
       )
       shiny::updateSelectizeInput(
         session = session,
         "voronoiVar",
-        choices = cats,
+        choices  = cats,
         selected = cats[1]
       )
     }) |>
@@ -347,6 +352,12 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
     output$mapPlot <- ggiraph::renderGirafe({
       input$showMap
       shiny::isolate({
+        shiny::req(
+          length(input$selectedVar) > 0,
+          length(input$Geschlecht) > 0,
+          length(input$Altersklasse) > 0
+        )
+
         mapData <- analysisData() |>
           dplyr::filter(
             gender %in% input$Geschlecht,
@@ -357,6 +368,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
             Wenkerorte,
             by = c("city" = "name")
           )
+
+        shiny::req(nrow(mapData) > 0)
         currentMapData(mapData)
 
         # Base map layer shared by all map types
@@ -390,6 +403,7 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
             dplyr::filter(!is.na(lon), !is.na(lat))
 
           cat_cols <- setdiff(names(pieData), c("city", "lon", "lat"))
+          shiny::req(length(cat_cols) > 0, nrow(pieData) > 0)
 
           # Build one tooltip string per city: name + per-category count + %
           row_totals <- rowSums(pieData[cat_cols])
