@@ -7,22 +7,22 @@ library(dplyr)
 create_voronoi_polygons <- function(points_sf) {
   # Voronoi-Diagramm erstellen
   voronoi <- st_voronoi(st_union(points_sf))
-  
+
   # Die einzelnen Polygone der Voronoi-Zerlegung extrahieren
   voronoi_polys <- st_cast(voronoi, "POLYGON")
-  
+
   # Voor jedes Polygon den ursprünglichen Punkt finden
   voronoi_sf <- st_sf(
     geometry = voronoi_polys
   )
-  
+
   # Räumliche Verknüpfung: Welcher Punkt liegt in welchem Voronoi-Polygon?
   # st_distance benutzen, um den nächsten Punkt zu jedem Polygon zu finden
   indices <- st_nearest_feature(points_sf, voronoi_sf)
-  
+
   # Umgekehrte Richtung: Für jedes Voronoi-Polygon finde den nächsten Punkt
   poly_to_point <- st_nearest_feature(voronoi_sf, points_sf)
-  
+
   # Attribute des ursprünglichen Punktes an das Voronoi-Polygon anhängen
   voronoi_sf <- voronoi_sf |>
     mutate(
@@ -32,14 +32,14 @@ create_voronoi_polygons <- function(points_sf) {
         ~NA
       )
     )
-  
+
   # Attribute von den ursprünglichen Punkten kopieren
   for (i in seq_len(nrow(voronoi_sf))) {
     point_idx <- poly_to_point[i]
-    voronoi_sf[i, names(st_drop_geometry(points_sf))] <- 
+    voronoi_sf[i, names(st_drop_geometry(points_sf))] <-
       st_drop_geometry(points_sf[point_idx, ])
   }
-  
+
   return(voronoi_sf)
 }
 
