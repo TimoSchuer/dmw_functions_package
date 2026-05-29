@@ -114,11 +114,15 @@ mapUI <- function(id) {
                 )
               )
             ),
-            shiny::p(),
-            shiny::actionButton(
-              shiny::NS(id, "mapLabel"),
-              label = "Label anpassen",
-              icon = shiny::icon("font")
+            shiny::conditionalPanel(
+              condition = "input.mapType == 'Voronoi'",
+              ns = shiny::NS(id),
+              shiny::selectizeInput(
+                shiny::NS(id, "voronoiVar"),
+                label = "Variante auswählen",
+                choices = NULL,
+                selected = NULL
+              )
             )
           ),
           bslib::accordion_panel(
@@ -298,8 +302,20 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
       mergedData
     })
 
+    # Voronoi polygons computed once — no reactive dependencies, so Shiny
+    # caches the result permanently for the session lifetime.
+    voronoiData <- shiny::reactive({
+      voronoi_raw <- sf::st_voronoi(sf::st_union(Wenkerorte))
+      voronoi_polys <- sf::st_cast(voronoi_raw, "POLYGON")
+      voronoi_sf <- sf::st_sf(geometry = voronoi_polys)
+      poly_to_point <- sf::st_nearest_feature(voronoi_sf, Wenkerorte)
+      voronoi_sf$name <- Wenkerorte$name[poly_to_point]
+      sf::st_intersection(voronoi_sf, sf::st_union(EG_DMW))
+    })
+
     shiny::observe({
       shiny::req(analysisData())
+      cats <- unique(analysisData()$category)
       shiny::updateSelectizeInput(
         session = session,
         "Geschlecht",
@@ -315,8 +331,14 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
       shiny::updateSelectizeInput(
         session = session,
         "selectedVar",
-        choices = unique(analysisData()$category),
-        selected = unique(analysisData()$category)
+        choices = cats,
+        selected = cats
+      )
+      shiny::updateSelectizeInput(
+        session = session,
+        "voronoiVar",
+        choices = cats,
+        selected = cats[1]
       )
     }) |>
       shiny::bindEvent(analysisData())
@@ -334,12 +356,9 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
             by = c("city" = "name")
           )
 
-        # Base map layer shared by both map types
+        # Base map layer shared by all map types
         base <- ggplot2::ggplot() +
-          ggiraph::geom_sf_interactive(
-            data = EG_DMW,
-            fill = input$mapBackground
-          )
+          ggiraph::geom_sf_interactive(data = EG_DMW)
 
         p <- if (input$mapType == "Kreis") {
           # Get lon/lat from the package sf object directly — Wenkerorte is
@@ -411,15 +430,70 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
             ) +
             ggplot2::coord_sf() +
             ggplot2::theme_void()
+        } else if (input$mapType == "Voronoi") {
+          shiny::req(input$voronoiVar)
+
+          # Per-city counts: total tokens and tokens of the selected variant
+          cityData <- data.frame(
+            city     = mapData[["city"]],
+            category = mapData[["category"]]
+          )
+          totals <- dplyr::count(cityData, city, name = "total")
+          selected_counts <- cityData |>
+            dplyr::filter(category == input$voronoiVar) |>
+            dplyr::count(city, name = "n_selected")
+
+          aggData <- totals |>
+            dplyr::left_join(selected_counts, by = "city") |>
+            dplyr::mutate(
+              n_selected = ifelse(is.na(n_selected), 0L, n_selected),
+              pct        = n_selected / total
+            )
+
+          # Join percentages onto Voronoi polygons; unmatched tiles → NA (grey)
+          vorData <- voronoiData() |>
+            dplyr::left_join(aggData, by = c("name" = "city")) |>
+            dplyr::mutate(
+              tooltip = ifelse(
+                is.na(total),
+                name,
+                paste0(
+                  "<b>", name, "</b><br/>",
+                  input$voronoiVar, ": ", n_selected,
+                  " / ", total,
+                  " (", round(pct * 100, 1), "%)"
+                )
+              )
+            )
+
+          ggplot2::ggplot() +
+            ggiraph::geom_sf_interactive(
+              data = vorData,
+              ggplot2::aes(
+                fill    = pct,
+                tooltip = tooltip,
+                data_id = name
+              ),
+              color = "grey60",
+              linewidth = 0.2
+            ) +
+            ggplot2::scale_fill_gradient(
+              low      = "white",
+              high     = "#2166ac",
+              na.value = "grey80",
+              name     = "%",
+              labels   = function(x) paste0(round(x * 100), "%")
+            ) +
+            ggplot2::theme_void()
         } else {
           base +
             ggiraph::geom_sf_interactive(
               data = mapData,
               ggplot2::aes(
                 geometry = geometry,
-                color = category,
-                tooltip = city,
-                data_id = category
+                color    = category,
+                tooltip  = city,
+                data_id  = category
               )
             ) +
             ggplot2::theme_void()
