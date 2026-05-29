@@ -303,7 +303,12 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
     })
 
     voronoiData <- shiny::reactive({
-      sf::st_intersection(Wenkerorte_Voronoi, sf::st_union(EG_DMW))
+      sf::sf_use_s2(FALSE)
+      on.exit(sf::sf_use_s2(TRUE))
+      sf::st_intersection(
+        sf::st_make_valid(Wenkerorte_Voronoi),
+        sf::st_union(sf::st_make_valid(EG_DMW))
+      )
     })
 
     shiny::observe({
