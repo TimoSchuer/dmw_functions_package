@@ -110,8 +110,10 @@ createAnalysisUI <- function(id) {
         title = "Sortieren",
         height = "800px",
         full_screen = TRUE,
-        style = "min-width: 300px; display: flex; flex-direction: column;",
-        bslib::card(
+        style = "min-width: 300px; display: flex; flex-direction: column; overflow: hidden; padding: 0;",
+        # Fixed controls header — never shrinks regardless of bucket list size
+        shiny::div(
+          style = "flex: 0 0 auto; padding: 12px 16px; border-bottom: 1px solid var(--bs-border-color);",
           bslib::layout_column_wrap(
             width = 1 / 2,
             shiny::selectizeInput(
@@ -124,13 +126,8 @@ createAnalysisUI <- function(id) {
               "Ziel",
               choices = ""
             )
-          )
-        ),
-        bslib::card(
-          title = "Filter",
-          min_height = "100px",
-          max_height = "150px",
-          shiny::h5("Filter"),
+          ),
+          shiny::h6("Filter", style = "margin-bottom: 6px;"),
           bslib::layout_column_wrap(
             width = NULL,
             style = htmltools::css(
@@ -139,7 +136,7 @@ createAnalysisUI <- function(id) {
             ),
             shiny::selectizeInput(
               shiny::NS(id, "activeFilters"),
-              "Aktive Filter",
+              label = NULL,
               choices = "",
               multiple = TRUE
             ),
@@ -150,9 +147,9 @@ createAnalysisUI <- function(id) {
             )
           )
         ),
-        bslib::card(
-          class = "flex-fill",
-          style = "overflow: auto;",
+        # Scrollable bucket list — fills all remaining space
+        shiny::div(
+          style = "flex: 1 1 0; min-height: 0; overflow: auto; padding: 12px 16px;",
           shiny::uiOutput(shiny::NS(id, "sortBucketUI")) |>
             shinycssloaders::withSpinner(type = 4)
         )
