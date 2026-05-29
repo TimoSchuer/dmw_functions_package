@@ -344,24 +344,29 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           )
 
         p <- if (input$mapType == "Kreis") {
-          # Aggregate to one row per city, one column per category
-          coords <- mapData |>
-            dplyr::distinct(city, geometry) |>
+          # Get lon/lat from the package sf object directly — Wenkerorte is
+          # always a proper sf object so st_drop_geometry() works reliably.
+          wenker_coords <- Wenkerorte |>
             dplyr::mutate(
               lon = sf::st_coordinates(geometry)[, 1],
               lat = sf::st_coordinates(geometry)[, 2]
             ) |>
-            sf::st_drop_geometry()
-
-          pieData <- mapData |>
             sf::st_drop_geometry() |>
+            dplyr::select(name, lon, lat)
+
+          # Build pieData from plain columns only — avoids any residual
+          # geometry list-column that survives a non-sf left_join.
+          pieData <- data.frame(
+            city     = mapData[["city"]],
+            category = mapData[["category"]]
+          ) |>
             dplyr::count(city, category) |>
             tidyr::pivot_wider(
-              names_from = category,
+              names_from  = category,
               values_from = n,
-              values_fill = 0
+              values_fill = 0L
             ) |>
-            dplyr::left_join(coords, by = "city") |>
+            dplyr::left_join(wenker_coords, by = c("city" = "name")) |>
             dplyr::filter(!is.na(lon), !is.na(lat))
 
           cat_cols <- setdiff(names(pieData), c("city", "lon", "lat"))
