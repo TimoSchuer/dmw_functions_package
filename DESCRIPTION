@@ -23,7 +23,13 @@ Imports:
     sodium,
     blastula,
     DT,
-    sf
+    sf,
+    ggiraph,
+    ggplot2,
+    colourpicker,
+    bsicons,
+    sortable,
+    shinycssloaders
 Suggests:
     testthat (>= 3.0.0)
 Depends: 
