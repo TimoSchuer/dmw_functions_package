@@ -392,24 +392,28 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
 
           # Build one tooltip string per city: name + per-category count + %
           row_totals <- rowSums(pieData[cat_cols])
-          pieData$tooltip <- paste0(
-            "<b>",
-            pieData$city,
-            "</b><br/>",
-            apply(pieData[cat_cols], 1, function(row) {
-              total <- sum(row)
-              paste(
-                paste0(
-                  names(row),
-                  ": ",
-                  row,
-                  " (",
-                  round(row / total * 100, 1),
-                  "%)"
-                ),
-                collapse = "<br/>"
-              )
-            })
+          pieData$tooltip <- gsub(
+            "'",
+            "&#39;",
+            paste0(
+              "<b>",
+              pieData$city,
+              "</b><br/>",
+              apply(pieData[cat_cols], 1, function(row) {
+                total <- sum(row)
+                paste(
+                  paste0(
+                    names(row),
+                    ": ",
+                    row,
+                    " (",
+                    round(row / total * 100, 1),
+                    "%)"
+                  ),
+                  collapse = "<br/>"
+                )
+              })
+            )
           )
 
           base +
@@ -425,7 +429,7 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
                 x = lon,
                 y = lat,
                 tooltip = tooltip,
-                data_id = city
+                data_id = gsub("'", "&#39;", city)
               ),
               alpha = 0,
               size = input$pieRadius * 8
@@ -456,23 +460,28 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           vorData <- voronoiData() |>
             dplyr::left_join(aggData, by = c("name" = "city")) |>
             dplyr::mutate(
-              tooltip = ifelse(
-                is.na(total),
-                name,
-                paste0(
-                  "<b>",
+              tooltip = gsub(
+                "'",
+                "&#39;",
+                ifelse(
+                  is.na(total),
                   name,
-                  "</b><br/>",
-                  input$voronoiVar,
-                  ": ",
-                  n_selected,
-                  " / ",
-                  total,
-                  " (",
-                  round(pct * 100, 1),
-                  "%)"
+                  paste0(
+                    "<b>",
+                    name,
+                    "</b><br/>",
+                    input$voronoiVar,
+                    ": ",
+                    n_selected,
+                    " / ",
+                    total,
+                    " (",
+                    round(pct * 100, 1),
+                    "%)"
+                  )
                 )
-              )
+              ),
+              name_esc = gsub("'", "&#39;", name)
             )
 
           ggplot2::ggplot() +
@@ -481,7 +490,7 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
               ggplot2::aes(
                 fill = pct,
                 tooltip = tooltip,
-                data_id = name
+                data_id = name_esc
               ),
               color = "grey60",
               linewidth = 0.2
@@ -501,8 +510,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
               ggplot2::aes(
                 geometry = geometry,
                 color = category,
-                tooltip = city,
-                data_id = category
+                tooltip = gsub("'", "&#39;", city),
+                data_id = gsub("'", "&#39;", category)
               )
             ) +
             ggplot2::theme_void()
