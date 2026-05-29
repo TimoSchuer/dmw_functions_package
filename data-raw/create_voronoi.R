@@ -5,42 +5,26 @@ library(dplyr)
 
 # Funktion zum Erstellen von Voronoi-Polygonen mit Attributen
 create_voronoi_polygons <- function(points_sf) {
-  # Voronoi-Diagramm erstellen
-  voronoi <- st_voronoi(st_union(points_sf))
+  original_crs <- sf::st_crs(points_sf)
 
-  # Die einzelnen Polygone der Voronoi-Zerlegung extrahieren
-  voronoi_polys <- st_cast(voronoi, "POLYGON")
+  # st_voronoi requires planar (projected) coordinates.
+  # EPSG:25832 = ETRS89 / UTM zone 32N — suitable for Germany.
+  points_proj <- sf::st_transform(points_sf, 25832)
 
-  # Voor jedes Polygon den ursprünglichen Punkt finden
-  voronoi_sf <- st_sf(
-    geometry = voronoi_polys
+  # Compute Voronoi on projected data
+  voronoi_raw   <- st_voronoi(st_union(points_proj))
+  voronoi_polys <- sf::st_collection_extract(voronoi_raw, "POLYGON")
+  voronoi_sf    <- st_sf(geometry = voronoi_polys)
+
+  # Match each Voronoi polygon to its nearest input point → copy attributes
+  poly_to_point <- st_nearest_feature(voronoi_sf, points_proj)
+  voronoi_sf    <- sf::st_sf(
+    as.data.frame(st_drop_geometry(points_sf[poly_to_point, ])),
+    geometry = sf::st_geometry(voronoi_sf)
   )
 
-  # Räumliche Verknüpfung: Welcher Punkt liegt in welchem Voronoi-Polygon?
-  # st_distance benutzen, um den nächsten Punkt zu jedem Polygon zu finden
-  indices <- st_nearest_feature(points_sf, voronoi_sf)
-
-  # Umgekehrte Richtung: Für jedes Voronoi-Polygon finde den nächsten Punkt
-  poly_to_point <- st_nearest_feature(voronoi_sf, points_sf)
-
-  # Attribute des ursprünglichen Punktes an das Voronoi-Polygon anhängen
-  voronoi_sf <- voronoi_sf |>
-    mutate(
-      .before = geometry,
-      across(
-        everything(),
-        ~NA
-      )
-    )
-
-  # Attribute von den ursprünglichen Punkten kopieren
-  for (i in seq_len(nrow(voronoi_sf))) {
-    point_idx <- poly_to_point[i]
-    voronoi_sf[i, names(st_drop_geometry(points_sf))] <-
-      st_drop_geometry(points_sf[point_idx, ])
-  }
-
-  return(voronoi_sf)
+  # Return in the original CRS
+  sf::st_transform(voronoi_sf, original_crs)
 }
 
 # Pfad zum data Ordner

@@ -302,15 +302,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
       mergedData
     })
 
-    # Voronoi polygons computed once — no reactive dependencies, so Shiny
-    # caches the result permanently for the session lifetime.
     voronoiData <- shiny::reactive({
-      voronoi_raw <- sf::st_voronoi(sf::st_union(Wenkerorte))
-      voronoi_polys <- sf::st_cast(voronoi_raw, "POLYGON")
-      voronoi_sf <- sf::st_sf(geometry = voronoi_polys)
-      poly_to_point <- sf::st_nearest_feature(voronoi_sf, Wenkerorte)
-      voronoi_sf$name <- Wenkerorte$name[poly_to_point]
-      sf::st_intersection(voronoi_sf, sf::st_union(EG_DMW))
+      Wenkerorte_Voronoi
     })
 
     shiny::observe({
