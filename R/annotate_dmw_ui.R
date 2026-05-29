@@ -94,187 +94,118 @@ annotateDmwUI <- function(id, min_height = "200px", class = NULL) {
             placement = "right"
           )
       ),
-      bslib::layout_column_wrap(
-        width = NULL,
-        style = htmltools::css(grid_template_columns = "3fr 3fr 3fr"),
+      bslib::layout_columns(
+        col_widths = bslib::breakpoints(sm = 12, md = 4),
         bslib::value_box(
           title = "Aktuelles Item",
-          min_height = "150px",
-          max_height = "180px",
-          style = "margin-right: 0px;margin-bottom: 10px;",
+          style = "margin-bottom: 10px;",
           value = shiny::textOutput(shiny::NS(id, "currentItem"))
         ),
         bslib::value_box(
           value = shiny::textOutput(shiny::NS(id, "itemCounter")),
           title = "Item Fortschritt",
-          min_height = "150px",
-          max_height = "180px",
-          style = "margin-left: 0px;margin-bottom: 10px;"
+          style = "margin-bottom: 10px;"
         ),
         bslib::value_box(
-          title = "Forschritt Annotation",
-          min_height = "150px",
-          max_height = "180px",
-          style = "margin-left: 0px; margin-bottom: 10px;",
+          title = "Fortschritt Annotation",
+          style = "margin-bottom: 10px;",
           value = shiny::textOutput(shiny::NS(id, "progressPercent"))
         )
       ),
       bslib::card(
         style = "border-style: none; margin-top: 15px;",
-        uiOutput(shiny::NS(id, "audioPlayer")),
-        min_height = "150px",
-        max_height = "180px"
+        shiny::uiOutput(shiny::NS(id, "audioPlayer"))
       ),
-      bslib::layout_column_wrap(
-        width = NULL,
-        style = htmltools::css(grid_template_columns = " 6fr 3fr"),
+      bslib::layout_columns(
+        col_widths = bslib::breakpoints(sm = 12, lg = c(8, 4)),
         bslib::card(
           min_height = "250px",
           class = class,
-          bslib::layout_column_wrap(
-            width = NULL,
-            style = htmltools::css(grid_template_columns = "1fr"),
-            shiny::h4(shiny::textOutput(shiny::NS(id, "currentCategory"))),
-            shiny::selectizeInput(
-              shiny::NS(id, "annValue"),
-              label = "Variante auswählen oder eingeben",
-              choices = NULL,
-              width = "100%",
-              options = list(
-                create = TRUE,
-                createOnBlur = TRUE,
-                placeholder = "Variante auswählen oder neue eingeben..."
-              )
+          shiny::h4(shiny::textOutput(shiny::NS(id, "currentCategory"))),
+          shiny::selectizeInput(
+            shiny::NS(id, "annValue"),
+            label = "Variante auswählen oder eingeben",
+            choices = NULL,
+            width = "100%",
+            options = list(
+              create = TRUE,
+              createOnBlur = TRUE,
+              placeholder = "Variante auswählen oder neue eingeben..."
             )
           ),
-          bslib::layout_column_wrap(
-            width = 1 / 4,
+          shiny::div(
+            style = "display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px;",
             shiny::actionButton(
               shiny::NS(id, "previousItem"),
-              label = "",
-              icon = shiny::icon("backward-fast"),
-              width = "100%",
-              disabled = TRUE
-            ) |>
-              bslib::tooltip(
-                "Vorheriges Item (mit Speichern)",
-                placement = "top"
-              ),
+              label = "", icon = shiny::icon("backward-fast"),
+              style = "flex: 1 1 20%;", disabled = TRUE
+            ) |> bslib::tooltip("Vorheriges Item (mit Speichern)", placement = "top"),
             shiny::actionButton(
               shiny::NS(id, "previousCategory"),
-              label = "",
-              icon = shiny::icon("backward-step"),
-              width = "100%",
-              disabled = TRUE
-            ) |>
-              bslib::tooltip(
-                "Vorherige Kategorie (mit Speichern)",
-                placement = "top"
-              ),
+              label = "", icon = shiny::icon("backward-step"),
+              style = "flex: 1 1 20%;", disabled = TRUE
+            ) |> bslib::tooltip("Vorherige Kategorie (mit Speichern)", placement = "top"),
             shiny::actionButton(
               shiny::NS(id, "nextCategory"),
-              label = "",
-              icon = shiny::icon("forward-step"),
-              width = "100%",
-              disabled = TRUE
-            ) |>
-              bslib::tooltip(
-                "Nächste Kategorie (mit Speichern)",
-                placement = "top"
-              ),
+              label = "", icon = shiny::icon("forward-step"),
+              style = "flex: 1 1 20%;", disabled = TRUE
+            ) |> bslib::tooltip("Nächste Kategorie (mit Speichern)", placement = "top"),
             shiny::actionButton(
               shiny::NS(id, "nextItem"),
-              label = "",
-              icon = shiny::icon("forward-fast"),
-              width = "100%"
-            ) |>
-              bslib::tooltip(
-                "Nächstes Item (mit Speichern)",
-                placement = "top"
-              )
+              label = "", icon = shiny::icon("forward-fast"),
+              style = "flex: 1 1 20%;"
+            ) |> bslib::tooltip("Nächstes Item (mit Speichern)", placement = "top")
           ),
-          bslib::layout_column_wrap(
-            width = 1 / 4,
+          shiny::div(
+            style = "display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;",
             shiny::actionButton(
               shiny::NS(id, "previousItemNoSave"),
-              label = "",
-              icon = shiny::icon("angles-left"),
-              width = "100%",
-              disabled = TRUE,
+              label = "", icon = shiny::icon("angles-left"),
+              style = "flex: 1 1 20%;", disabled = TRUE,
               class = "btn-outline-secondary"
-            ) |>
-              bslib::tooltip(
-                "Vorheriges Item (ohne Speichern)",
-                placement = "top"
-              ),
+            ) |> bslib::tooltip("Vorheriges Item (ohne Speichern)", placement = "top"),
             shiny::actionButton(
               shiny::NS(id, "previousCategoryNoSave"),
-              label = "",
-              icon = shiny::icon("angle-left"),
-              width = "100%",
-              disabled = TRUE,
+              label = "", icon = shiny::icon("angle-left"),
+              style = "flex: 1 1 20%;", disabled = TRUE,
               class = "btn-outline-secondary"
-            ) |>
-              bslib::tooltip(
-                "Vorherige Kategorie (ohne Speichern)",
-                placement = "top"
-              ),
+            ) |> bslib::tooltip("Vorherige Kategorie (ohne Speichern)", placement = "top"),
             shiny::actionButton(
               shiny::NS(id, "nextCategoryNoSave"),
-              label = "",
-              icon = shiny::icon("angle-right"),
-              width = "100%",
-              disabled = TRUE,
+              label = "", icon = shiny::icon("angle-right"),
+              style = "flex: 1 1 20%;", disabled = TRUE,
               class = "btn-outline-secondary"
-            ) |>
-              bslib::tooltip(
-                "Nächste Kategorie (ohne Speichern)",
-                placement = "top"
-              ),
+            ) |> bslib::tooltip("Nächste Kategorie (ohne Speichern)", placement = "top"),
             shiny::actionButton(
               shiny::NS(id, "nextItemNoSave"),
-              label = "",
-              icon = shiny::icon("angles-right"),
-              width = "100%",
+              label = "", icon = shiny::icon("angles-right"),
+              style = "flex: 1 1 20%;",
               class = "btn-outline-secondary"
-            ) |>
-              bslib::tooltip(
-                "Nächstes Item (ohne Speichern)",
-                placement = "top"
-              )
+            ) |> bslib::tooltip("Nächstes Item (ohne Speichern)", placement = "top")
           ),
           shiny::uiOutput(shiny::NS(id, "comment")),
-          bslib::layout_column_wrap(
-            width = 1 / 3,
+          shiny::div(
+            style = "display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px;",
             shiny::actionButton(
               shiny::NS(id, "addComment"),
-              label = "",
-              icon = shiny::icon("comment-dots"),
-              width = "50%"
-            ) |>
-              bslib::tooltip(
-                "Kommentar hinzufügen",
-                placement = "top"
-              ),
+              label = "", icon = shiny::icon("comment-dots")
+            ) |> bslib::tooltip("Kommentar hinzufügen", placement = "top"),
             bslib::input_switch(
               shiny::NS(id, "unclear"),
-              label = "Item als Zweifelsfall markieren",
-              value = FALSE,
-              width = "100%"
+              label = "Zweifelsfall",
+              value = FALSE
             ),
             bslib::input_switch(
               shiny::NS(id, "unusable"),
-              label = "Item nicht auswertbar",
-              value = FALSE,
-              width = "100%"
-            ),
+              label = "Nicht auswertbar",
+              value = FALSE
+            )
           )
         ),
         bslib::card(
           shiny::actionButton(
             shiny::NS(id, "showInfo"),
-            label = "",
-            icon = shiny::icon("info-circle"),
+            label = "", icon = shiny::icon("info-circle"),
             width = "100%"
           ),
           shiny::actionButton(
@@ -293,12 +224,12 @@ annotateDmwUI <- function(id, min_height = "200px", class = NULL) {
             label = "Springe zu Item"
           ),
           bslib::input_switch(
-            NS(id, "onlyDoubt"),
+            shiny::NS(id, "onlyDoubt"),
             label = "Nur Zweifelsfälle anzeigen",
             value = FALSE,
             width = "100%"
           )
-        ),
+        )
       )
     )
   )
