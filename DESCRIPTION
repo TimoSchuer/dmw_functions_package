@@ -29,7 +29,9 @@ Imports:
     colourpicker,
     bsicons,
     sortable,
-    shinycssloaders
+    shinycssloaders,
+    scatterpie,
+    tidyr
 Suggests:
     testthat (>= 3.0.0)
 Depends: 

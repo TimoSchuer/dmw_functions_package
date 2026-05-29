@@ -96,6 +96,18 @@ mapUI <- function(id) {
               palette = "square"
             ),
             shiny::conditionalPanel(
+              condition = "input.mapType == 'Kreis'",
+              ns = shiny::NS(id),
+              shiny::sliderInput(
+                shiny::NS(id, "pieRadius"),
+                label = "Kuchengröße",
+                min = 0.1,
+                max = 3,
+                value = 1,
+                step = 0.1
+              )
+            ),
+            shiny::conditionalPanel(
               condition = "input.mapType == 'Punkt'",
               ns = shiny::NS(id),
               shiny::tagList(
@@ -324,16 +336,59 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
             by = c("city" = "name")
           )
 
-        p <- mapData |>
-          ggplot2::ggplot() +
-          ggiraph::geom_sf_interactive(data = EG_DMW) +
-          ggiraph::geom_sf_interactive(ggplot2::aes(
-            geometry = geometry,
-            color = category,
-            tooltip = city,
-            data_id = category
-          )) +
-          ggplot2::theme_void()
+        # Base map layer shared by both map types
+        base <- ggplot2::ggplot() +
+          ggiraph::geom_sf_interactive(
+            data = EG_DMW,
+            fill = input$mapBackground
+          )
+
+        p <- if (input$mapType == "Kreis") {
+          # Aggregate to one row per city, one column per category
+          coords <- mapData |>
+            dplyr::distinct(city, geometry) |>
+            dplyr::mutate(
+              lon = sf::st_coordinates(geometry)[, 1],
+              lat = sf::st_coordinates(geometry)[, 2]
+            ) |>
+            sf::st_drop_geometry()
+
+          pieData <- mapData |>
+            sf::st_drop_geometry() |>
+            dplyr::count(city, category) |>
+            tidyr::pivot_wider(
+              names_from = category,
+              values_from = n,
+              values_fill = 0
+            ) |>
+            dplyr::left_join(coords, by = "city") |>
+            dplyr::filter(!is.na(lon), !is.na(lat))
+
+          cat_cols <- setdiff(names(pieData), c("city", "lon", "lat"))
+
+          base +
+            scatterpie::geom_scatterpie(
+              data = pieData,
+              ggplot2::aes(x = lon, y = lat, group = city),
+              cols = cat_cols,
+              pie_scale = input$pieRadius
+            ) +
+            ggplot2::coord_sf() +
+            ggplot2::theme_void()
+        } else {
+          base +
+            ggiraph::geom_sf_interactive(
+              data = mapData,
+              ggplot2::aes(
+                geometry = geometry,
+                color = category,
+                tooltip = city,
+                data_id = category
+              )
+            ) +
+            ggplot2::theme_void()
+        }
+
         ggiraph::girafe(
           ggobj = p,
           options = list(
