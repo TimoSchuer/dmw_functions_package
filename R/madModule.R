@@ -259,6 +259,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           .con = conAnn
         )
       )
+      print("Analysis Data:")
+      print(analysis)
       rawData <- DBI::dbGetQuery(
         conDMW,
         glue::glue_sql(
@@ -266,6 +268,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           .con = conDMW
         )
       )
+      print("Raw Data:")
+      print(rawData)
       informants <- DBI::dbGetQuery(
         conDMW,
         glue::glue_sql(
@@ -273,6 +277,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           .con = conDMW
         )
       )
+      print("Informants:")
+      print(informants)
       mergedData <- rawData |>
         dplyr::select(
           informant_id,
