@@ -79,21 +79,8 @@ mapUI <- function(id) {
             shiny::radioButtons(
               shiny::NS(id, "mapType"),
               label = "Karten Typ",
-              choices = c("Kreis", "Punkt"),
+              choices = c("Kreis", "Punkt", "Voronoi"),
               inline = TRUE
-            ),
-            shiny::h6("Hintergrund"),
-            shiny::radioButtons(
-              shiny::NS(id, "border"),
-              label = "Grenzen",
-              choices = c("Politisch", "Voronoi", "Keine"),
-              selected = "Politisch"
-            ),
-            colourpicker::colourInput(
-              shiny::NS(id, "mapBackground"),
-              label = "Hintergrundfarbe",
-              value = "white",
-              palette = "square"
             ),
             shiny::conditionalPanel(
               condition = "input.mapType == 'Kreis'",
@@ -162,7 +149,11 @@ mapUI <- function(id) {
         )
       ),
       shiny::uiOutput(shiny::NS(id, "mapAreaVar")),
-      ggiraph::girafeOutput(shiny::NS(id, "mapPlot"), width = "100%", height = "100%")
+      ggiraph::girafeOutput(
+        shiny::NS(id, "mapPlot"),
+        width = "100%",
+        height = "100%"
+      )
     )
   )
 }
@@ -279,7 +270,14 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
         )
       )
       mergedData <- rawData |>
-        dplyr::select(informant_id, subtask_id, rwl, ipa, konfidenzwert, username) |>
+        dplyr::select(
+          informant_id,
+          subtask_id,
+          rwl,
+          ipa,
+          konfidenzwert,
+          username
+        ) |>
         dplyr::left_join(informants, by = c("informant_id" = "informant_id")) |>
         dplyr::left_join(
           analysis |> dplyr::select(ipa, rws, category),
@@ -357,12 +355,12 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           # Build pieData from plain columns only — avoids any residual
           # geometry list-column that survives a non-sf left_join.
           pieData <- data.frame(
-            city     = mapData[["city"]],
+            city = mapData[["city"]],
             category = mapData[["category"]]
           ) |>
             dplyr::count(city, category) |>
             tidyr::pivot_wider(
-              names_from  = category,
+              names_from = category,
               values_from = n,
               values_fill = 0L
             ) |>
@@ -371,12 +369,45 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
 
           cat_cols <- setdiff(names(pieData), c("city", "lon", "lat"))
 
+          # Build one tooltip string per city: name + per-category count + %
+          row_totals <- rowSums(pieData[cat_cols])
+          pieData$tooltip <- paste0(
+            "<b>",
+            pieData$city,
+            "</b><br/>",
+            apply(pieData[cat_cols], 1, function(row) {
+              total <- sum(row)
+              paste(
+                paste0(
+                  names(row),
+                  ": ",
+                  row,
+                  " (",
+                  round(row / total * 100, 1),
+                  "%)"
+                ),
+                collapse = "<br/>"
+              )
+            })
+          )
+
           base +
             scatterpie::geom_scatterpie(
               data = pieData,
               ggplot2::aes(x = lon, y = lat, group = city),
               cols = cat_cols,
               pie_scale = input$pieRadius
+            ) +
+            ggiraph::geom_point_interactive(
+              data = pieData,
+              ggplot2::aes(
+                x = lon,
+                y = lat,
+                tooltip = tooltip,
+                data_id = city
+              ),
+              alpha = 0,
+              size = input$pieRadius * 8
             ) +
             ggplot2::coord_sf() +
             ggplot2::theme_void()
