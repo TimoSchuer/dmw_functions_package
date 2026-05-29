@@ -344,8 +344,9 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
     currentMapData <- shiny::reactiveVal(NULL)
     currentPlot <- shiny::reactiveVal(NULL)
 
-    shiny::observe({
-      output$mapPlot <- ggiraph::renderGirafe({
+    output$mapPlot <- ggiraph::renderGirafe({
+      input$showMap
+      shiny::isolate({
         mapData <- analysisData() |>
           dplyr::filter(
             gender %in% input$Geschlecht,
@@ -519,18 +520,21 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
 
         currentPlot(p)
 
-        ggiraph::girafe(
-          ggobj = p,
-          options = list(
-            ggiraph::opts_hover(
-              css = "opacity:1;stroke:black;stroke-width:0.5px;"
-            ),
+        hover_opts <- if (input$mapType == "Voronoi") {
+          list(
+            ggiraph::opts_hover(css = ""),
+            ggiraph::opts_hover_inv(css = "")
+          )
+        } else {
+          list(
+            ggiraph::opts_hover(css = "opacity:1;stroke:black;stroke-width:0.5px;"),
             ggiraph::opts_hover_inv(css = "opacity:0.4;stroke:gray;fill:gray;")
           )
-        )
-      })
-    }) |>
-      shiny::bindEvent(input$showMap)
+        }
+
+        ggiraph::girafe(ggobj = p, options = hover_opts)
+      }) # end isolate
+    })
 
     output$downloadMap <- shiny::downloadHandler(
       filename = function() {
