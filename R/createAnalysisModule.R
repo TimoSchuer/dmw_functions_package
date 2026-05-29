@@ -1236,7 +1236,7 @@ createAnalysis <- function(
         session = session,
         "activeFilters",
         choices = filters()$name,
-        selected = c(input$activeFilters, last(filters()$name))
+        selected = c(input$activeFilters, dplyr::last(filters()$name))
       )
     }) |>
       shiny::bindEvent(filters())
