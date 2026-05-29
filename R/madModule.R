@@ -106,12 +106,12 @@ mapUI <- function(id) {
                   value = 0.5,
                   step = 0.1
                 ),
-                shiny::p(),
-                shiny::actionButton(
-                  shiny::NS(id, "mapColor"),
-                  label = "Farben manuell zuordnen",
-                  icon = shiny::icon("palette")
-                )
+                # shiny::p(),
+                # shiny::actionButton(
+                #   shiny::NS(id, "mapColor"),
+                #   label = "Farben manuell zuordnen",
+                #   icon = shiny::icon("palette")
+                # )
               )
             ),
             shiny::conditionalPanel(
@@ -341,6 +341,9 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
     }) |>
       shiny::bindEvent(analysisData())
 
+    currentMapData <- shiny::reactiveVal(NULL)
+    currentPlot <- shiny::reactiveVal(NULL)
+
     shiny::observe({
       output$mapPlot <- ggiraph::renderGirafe({
         mapData <- analysisData() |>
@@ -353,6 +356,7 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
             Wenkerorte,
             by = c("city" = "name")
           )
+        currentMapData(mapData)
 
         # Base map layer shared by all map types
         base <- ggplot2::ggplot() +
@@ -433,7 +437,7 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
 
           # Per-city counts: total tokens and tokens of the selected variant
           cityData <- data.frame(
-            city     = mapData[["city"]],
+            city = mapData[["city"]],
             category = mapData[["category"]]
           )
           totals <- dplyr::count(cityData, city, name = "total")
@@ -445,7 +449,7 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
             dplyr::left_join(selected_counts, by = "city") |>
             dplyr::mutate(
               n_selected = ifelse(is.na(n_selected), 0L, n_selected),
-              pct        = n_selected / total
+              pct = n_selected / total
             )
 
           # Join percentages onto Voronoi polygons; unmatched tiles → NA (grey)
@@ -456,10 +460,17 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
                 is.na(total),
                 name,
                 paste0(
-                  "<b>", name, "</b><br/>",
-                  input$voronoiVar, ": ", n_selected,
-                  " / ", total,
-                  " (", round(pct * 100, 1), "%)"
+                  "<b>",
+                  name,
+                  "</b><br/>",
+                  input$voronoiVar,
+                  ": ",
+                  n_selected,
+                  " / ",
+                  total,
+                  " (",
+                  round(pct * 100, 1),
+                  "%)"
                 )
               )
             )
@@ -468,7 +479,7 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
             ggiraph::geom_sf_interactive(
               data = vorData,
               ggplot2::aes(
-                fill    = pct,
+                fill = pct,
                 tooltip = tooltip,
                 data_id = name
               ),
@@ -476,11 +487,11 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
               linewidth = 0.2
             ) +
             ggplot2::scale_fill_gradient(
-              low      = "white",
-              high     = "#2166ac",
+              low = "white",
+              high = "#2166ac",
               na.value = "grey80",
-              name     = "%",
-              labels   = function(x) paste0(round(x * 100), "%")
+              name = "%",
+              labels = function(x) paste0(round(x * 100), "%")
             ) +
             ggplot2::theme_void()
         } else {
@@ -489,13 +500,15 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
               data = mapData,
               ggplot2::aes(
                 geometry = geometry,
-                color    = category,
-                tooltip  = city,
-                data_id  = category
+                color = category,
+                tooltip = city,
+                data_id = category
               )
             ) +
             ggplot2::theme_void()
         }
+
+        currentPlot(p)
 
         ggiraph::girafe(
           ggobj = p,
@@ -509,5 +522,82 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
       })
     }) |>
       shiny::bindEvent(input$showMap)
+
+    output$downloadMap <- shiny::downloadHandler(
+      filename = function() {
+        paste0("karte_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
+      },
+      content = function(file) {
+        shiny::req(currentPlot())
+        ggplot2::ggsave(
+          file,
+          plot = currentPlot(),
+          device = "png",
+          width = 12,
+          height = 8,
+          dpi = 300,
+          bg = "white"
+        )
+      }
+    )
+
+    output$downloadData <- shiny::downloadHandler(
+      filename = function() {
+        ext <- switch(
+          input$downloadType,
+          csv = ".csv",
+          geojson = ".geojson",
+          rds = ".rds"
+        )
+        paste0("daten_", format(Sys.time(), "%Y%m%d_%H%M%S"), ext)
+      },
+      content = function(file) {
+        shiny::req(currentMapData())
+        data <- currentMapData()
+
+        switch(
+          input$downloadType,
+          csv = {
+            plain <- data.frame(
+              informant_id = data[["informant_id"]],
+              city = data[["city"]],
+              ipa = data[["ipa"]],
+              category = data[["category"]],
+              gender = data[["gender"]],
+              Altersklasse = data[["Altersklasse"]]
+            )
+            write.csv(plain, file, row.names = FALSE)
+          },
+          geojson = {
+            # Aggregate to city level with point geometry for mapping
+            geo <- data.frame(
+              city = data[["city"]],
+              category = data[["category"]]
+            ) |>
+              dplyr::count(city, category) |>
+              tidyr::pivot_wider(
+                names_from = category,
+                values_from = n,
+                values_fill = 0L
+              ) |>
+              dplyr::left_join(
+                dplyr::select(Wenkerorte, name, geometry),
+                by = c("city" = "name")
+              ) |>
+              sf::st_as_sf()
+            sf::st_write(
+              geo,
+              file,
+              driver = "GeoJSON",
+              delete_dsn = TRUE,
+              quiet = TRUE
+            )
+          },
+          rds = {
+            saveRDS(data, file)
+          }
+        )
+      }
+    )
   })
 }
