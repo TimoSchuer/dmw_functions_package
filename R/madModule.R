@@ -299,6 +299,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
             TRUE ~ "60+"
           )
         )
+      print("Merged Data:")
+      print(mergedData)
       mergedData
     })
 
@@ -315,32 +317,32 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
       data <- analysisData()
       shiny::req(nrow(data) > 0)
 
-      genders    <- unique(data$gender)
-      ages       <- unique(data$Altersklasse)
-      cats       <- unique(data$category)
+      genders <- unique(data$gender)
+      ages <- unique(data$Altersklasse)
+      cats <- unique(data$category)
 
       shiny::updateSelectizeInput(
         session = session,
         "Geschlecht",
-        choices  = genders,
+        choices = genders,
         selected = genders
       )
       shiny::updateSelectizeInput(
         session = session,
         "Altersklasse",
-        choices  = ages,
+        choices = ages,
         selected = ages
       )
       shiny::updateSelectizeInput(
         session = session,
         "selectedVar",
-        choices  = cats,
+        choices = cats,
         selected = cats
       )
       shiny::updateSelectizeInput(
         session = session,
         "voronoiVar",
-        choices  = cats,
+        choices = cats,
         selected = cats[1]
       )
     }) |>
@@ -470,6 +472,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
               n_selected = ifelse(is.na(n_selected), 0L, n_selected),
               pct = n_selected / total
             )
+          print("aggData:")
+          print(aggData)
 
           # Join percentages onto Voronoi polygons; unmatched tiles → NA (grey)
           vorData <- voronoiData() |>
@@ -541,7 +545,9 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           )
         } else {
           list(
-            ggiraph::opts_hover(css = "opacity:1;stroke:black;stroke-width:0.5px;"),
+            ggiraph::opts_hover(
+              css = "opacity:1;stroke:black;stroke-width:0.5px;"
+            ),
             ggiraph::opts_hover_inv(css = "opacity:0.4;stroke:gray;fill:gray;")
           )
         }
