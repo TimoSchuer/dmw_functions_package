@@ -15,7 +15,7 @@
 #' extract_first_syllable("ˈhaʊ.zən")  # "ˈhaʊ"
 #' extract_first_syllable("haʊs")       # "haʊs"
 extract_first_syllable <- function(ipa_string) {
-  strsplit(ipa_string, "\\.")[[1]][1]
+  strsplit(ipa_string[[1]], "\\.")[[1]][1]
 }
 
 #' Letzte Silbe einer IPA-Transkription extrahieren
@@ -35,7 +35,7 @@ extract_first_syllable <- function(ipa_string) {
 #' extract_last_syllable("ˈhaʊ.zən")  # "zən"
 #' extract_last_syllable("haʊs")       # "haʊs"
 extract_last_syllable <- function(ipa_string) {
-  parts <- strsplit(ipa_string, "\\.")[[1]]
+  parts <- strsplit(ipa_string[[1]], "\\.")[[1]]
   parts[length(parts)]
 }
 
@@ -58,18 +58,13 @@ extract_last_syllable <- function(ipa_string) {
 #' extract_stressed_syllable("haʊs")        # "haʊs"
 #' extract_stressed_syllable("haʊ.ˈzən")   # "ˈzən"
 extract_stressed_syllable <- function(ipa_string) {
-  if (!grepl("\\.", ipa_string)) {
-    return(ipa_string)
+  s <- ipa_string[[1]]
+  if (!grepl("\\.", s, fixed = FALSE)) {
+    return(s)
   }
-
-  parts <- strsplit(ipa_string, "\\.")[[1]]
-
+  parts <- strsplit(s, "\\.")[[1]]
   stressed_idx <- grep("ˈ", parts)
-  if (length(stressed_idx) > 0) {
-    return(parts[stressed_idx[1]])
-  }
-
-  return(parts[1])
+  if (length(stressed_idx) > 0) parts[stressed_idx[1]] else parts[1]
 }
 
 #' Nebenakzentuierte Silben einer IPA-Transkription extrahieren
@@ -90,18 +85,12 @@ extract_stressed_syllable <- function(ipa_string) {
 #' extract_secondary_stressed_syllables("ˌhaʊ.ˈzən.ˌbaw")  # c("ˌhaʊ", "ˌbaw")
 #' extract_secondary_stressed_syllables("ˈhaʊs")            # character(0)
 extract_secondary_stressed_syllables <- function(ipa_string) {
-  if (!grepl("\\.", ipa_string)) {
+  s <- ipa_string[[1]]
+  if (!grepl("\\.", s)) {
     return(character(0))
   }
-
-  parts <- strsplit(ipa_string, "\\.")[[1]]
-  secondary_idx <- grep("ˌ", parts)
-
-  if (length(secondary_idx) > 0) {
-    return(parts[secondary_idx])
-  }
-
-  return(character(0))
+  parts <- strsplit(s, "\\.")[[1]]
+  parts[grepl("ˌ", parts)]
 }
 
 #' IPA-Labels nach Silbentyp filtern
@@ -129,31 +118,24 @@ extract_secondary_stressed_syllables <- function(ipa_string) {
 #' filter_by_syllable(labels, "Erste Silbe", "beginnt mit", "ˈh")
 #' # "ˈhaʊ.zən"
 filter_by_syllable <- function(labels, syllable_type, operator, value) {
-  filtered <- labels
+  extractor <- switch(
+    syllable_type,
+    "Erste Silbe"    = extract_first_syllable,
+    "Letzte Silbe"   = extract_last_syllable,
+    "Betonte Silben" = extract_stressed_syllable,
+    function(x) ""
+  )
 
-  for (label in labels) {
-    syllable_content <- switch(
-      syllable_type,
-      "Erste Silbe"    = extract_first_syllable(label),
-      "Letzte Silbe"   = extract_last_syllable(label),
-      "Betonte Silben" = extract_stressed_syllable(label),
-      ""
-    )
+  syllable_contents <- vapply(labels, extractor, character(1))
 
-    match <- switch(
-      operator,
-      "beginnt mit" = grepl(paste0("^", value), syllable_content),
-      "endet mit"   = grepl(paste0(value, "$"), syllable_content),
-      "enthält"     = grepl(value, syllable_content),
-      FALSE
-    )
+  pattern <- switch(
+    operator,
+    "beginnt mit" = paste0("^", value),
+    "endet mit"   = paste0(value, "$"),
+    value
+  )
 
-    if (!match) {
-      filtered <- filtered[filtered != label]
-    }
-  }
-
-  return(filtered)
+  labels[grepl(pattern, syllable_contents)]
 }
 
 #' IPA-Labels nach nebenakzentuierter Silbe filtern
@@ -178,30 +160,19 @@ filter_by_syllable <- function(labels, syllable_type, operator, value) {
 #' filter_by_secondary_stress(labels, "beginnt mit", "ˌh")
 #' # "ˌhaʊ.ˈzən"
 filter_by_secondary_stress <- function(labels, operator, value) {
-  filtered <- c()
+  pattern <- switch(
+    operator,
+    "beginnt mit" = paste0("^", value),
+    "endet mit"   = paste0(value, "$"),
+    value
+  )
 
-  for (label in labels) {
-    secondary_syllables <- extract_secondary_stressed_syllables(label)
+  has_match <- vapply(labels, function(label) {
+    syllables <- extract_secondary_stressed_syllables(label)
+    length(syllables) > 0 && any(grepl(pattern, syllables))
+  }, logical(1))
 
-    if (length(secondary_syllables) > 0) {
-      for (syllable in secondary_syllables) {
-        match <- switch(
-          operator,
-          "beginnt mit" = grepl(paste0("^", value), syllable),
-          "endet mit"   = grepl(paste0(value, "$"), syllable),
-          "enthält"     = grepl(value, syllable),
-          FALSE
-        )
-
-        if (match) {
-          filtered <- c(filtered, label)
-          break
-        }
-      }
-    }
-  }
-
-  return(filtered)
+  labels[has_match]
 }
 
 #' Einen einzelnen IPA-Filter auf einen Labelvektor anwenden
@@ -233,19 +204,26 @@ apply_single_filter <- function(
   filter_operator,
   filter_value
 ) {
-  if (filter_silbe == "Alle Silben") {
-    return(switch(
+  # Coerce to scalar to guard against single-row data-frame column extraction
+  filter_silbe    <- filter_silbe[[1]]
+  filter_operator <- filter_operator[[1]]
+  filter_value    <- filter_value[[1]]
+
+  if (identical(filter_silbe, "Alle Silben")) {
+    pattern <- switch(
       filter_operator,
-      "beginnt mit" = labels[grepl(paste0("^", filter_value), labels)],
-      "endet mit"   = labels[grepl(paste0(filter_value, "$"), labels)],
-      "enthält"     = labels[grepl(filter_value, labels)],
-      labels
-    ))
-  } else if (filter_silbe == "Silbe mit Nebenakzent") {
-    return(filter_by_secondary_stress(labels, filter_operator, filter_value))
-  } else {
-    return(filter_by_syllable(labels, filter_silbe, filter_operator, filter_value))
+      "beginnt mit" = paste0("^", filter_value),
+      "endet mit"   = paste0(filter_value, "$"),
+      filter_value
+    )
+    return(labels[grepl(pattern, labels)])
   }
+
+  if (identical(filter_silbe, "Silbe mit Nebenakzent")) {
+    return(filter_by_secondary_stress(labels, filter_operator, filter_value))
+  }
+
+  filter_by_syllable(labels, filter_silbe, filter_operator, filter_value)
 }
 
 #' Mehrere IPA-Filter auf einen Labelvektor anwenden
@@ -288,7 +266,8 @@ apply_multiple_filters <- function(
   }
 
   if (!is.null(active_filter_names) && length(active_filter_names) > 0) {
-    filters_df <- filters_df |> dplyr::filter(name %in% active_filter_names)
+    filters_df <- filters_df[filters_df$name %in% active_filter_names, ,
+                              drop = FALSE]
   }
 
   if (nrow(filters_df) == 0) {
@@ -297,15 +276,14 @@ apply_multiple_filters <- function(
 
   result <- labels
   for (i in seq_len(nrow(filters_df))) {
-    filter_row <- filters_df[i, ]
     result <- apply_single_filter(
       result,
-      filter_row$silbe,
-      filter_row$operator,
-      filter_row$value
+      filters_df$silbe[[i]],
+      filters_df$operator[[i]],
+      filters_df$value[[i]]
     )
     if (length(result) == 0) break
   }
 
-  return(result)
+  result
 }
