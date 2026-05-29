@@ -40,7 +40,7 @@ mapUI <- function(id) {
       sidebar = bslib::sidebar(
         width = "400px",
         shiny::selectizeInput(
-          NS(id, "mapVar"),
+          shiny::NS(id, "mapVar"),
           "Analyse auswählen",
           choices = NULL,
           selected = NULL
@@ -51,23 +51,22 @@ mapUI <- function(id) {
           bslib::accordion_panel(
             title = "Daten filtern",
             icon = bsicons::bs_icon("funnel"),
-            selectizeInput(
-              NS(id, "Geschlecht"),
+            shiny::selectizeInput(
+              shiny::NS(id, "Geschlecht"),
               "Geschlecht",
               multiple = TRUE,
               choices = NULL,
               selected = NULL
             ),
-
-            selectizeInput(
-              NS(id, "Altersklasse"),
+            shiny::selectizeInput(
+              shiny::NS(id, "Altersklasse"),
               "Altersklasse",
               multiple = TRUE,
               choices = NULL,
               selected = NULL
             ),
-            selectizeInput(
-              NS(id, "selectedVar"),
+            shiny::selectizeInput(
+              shiny::NS(id, "selectedVar"),
               "Varianten auswählen",
               choices = NULL,
               selected = NULL,
@@ -78,31 +77,30 @@ mapUI <- function(id) {
             title = "Karte gestalten",
             icon = bsicons::bs_icon("palette"),
             shiny::radioButtons(
-              NS(id, "mapType"),
+              shiny::NS(id, "mapType"),
               label = "Karten Typ",
               choices = c("Kreis", "Punkt"),
               inline = TRUE
             ),
             shiny::h6("Hintergrund"),
             shiny::radioButtons(
-              NS(id, "border"),
+              shiny::NS(id, "border"),
               label = "Grenzen",
               choices = c("Politisch", "Voronoi", "Keine"),
               selected = "Politisch"
             ),
             colourpicker::colourInput(
-              NS(id, "mapBackground"),
+              shiny::NS(id, "mapBackground"),
               label = "Hintergrundfarbe",
               value = "white",
               palette = "square"
             ),
-
             shiny::conditionalPanel(
               condition = "input.mapType == 'Punkt'",
-              ns = NS(id),
+              ns = shiny::NS(id),
               shiny::tagList(
                 shiny::sliderInput(
-                  NS(id, "transparency"),
+                  shiny::NS(id, "transparency"),
                   label = "Transparenz Kreise",
                   min = 0,
                   max = 1,
@@ -111,7 +109,7 @@ mapUI <- function(id) {
                 ),
                 shiny::p(),
                 shiny::actionButton(
-                  NS(id, "mapColor"),
+                  shiny::NS(id, "mapColor"),
                   label = "Farben manuell zuordnen",
                   icon = shiny::icon("palette")
                 )
@@ -119,7 +117,7 @@ mapUI <- function(id) {
             ),
             shiny::p(),
             shiny::actionButton(
-              NS(id, "mapLabel"),
+              shiny::NS(id, "mapLabel"),
               label = "Label anpassen",
               icon = shiny::icon("font")
             )
@@ -128,31 +126,31 @@ mapUI <- function(id) {
             "Karte exportieren",
             icon = bsicons::bs_icon("download"),
             shiny::downloadButton(
-              outputId = NS(id, "downloadMap"),
+              outputId = shiny::NS(id, "downloadMap"),
               label = "Karte herunterladen"
             ),
             shiny::p(""),
             shiny::radioButtons(
-              NS(id, "downloadType"),
+              shiny::NS(id, "downloadType"),
               label = "Dateityp",
               choices = c("csv", "geojson", "rds"),
               selected = "csv"
             ),
             shiny::downloadButton(
-              outputId = NS(id, "downloadData"),
+              outputId = shiny::NS(id, "downloadData"),
               label = "Daten herunterladen"
             )
           ),
           shiny::p(""),
           shiny::actionButton(
-            NS(id, "showMap"),
+            shiny::NS(id, "showMap"),
             label = "Karte anzeigen",
             icon = shiny::icon("map")
           )
         )
       ),
-      shiny::uiOutput(NS(id, "mapAreaVar")),
-      ggiraph::girafeOutput(NS(id, "mapPlot"), width = "100%", height = "100%")
+      shiny::uiOutput(shiny::NS(id, "mapAreaVar")),
+      ggiraph::girafeOutput(shiny::NS(id, "mapPlot"), width = "100%", height = "100%")
     )
   )
 }
@@ -234,8 +232,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
       }
     )
 
-    observe({
-      updateSelectizeInput(
+    shiny::observe({
+      shiny::updateSelectizeInput(
         session = session,
         "mapVar",
         choices = choicesAnalysis()
@@ -243,8 +241,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
     }) |>
       shiny::bindEvent(choicesAnalysis())
 
-    analysisData <- reactive({
-      req(input$mapVar)
+    analysisData <- shiny::reactive({
+      shiny::req(input$mapVar)
       analysis <- DBI::dbGetQuery(
         conAnn,
         glue::glue_sql(
@@ -254,8 +252,6 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           .con = conAnn
         )
       )
-      # print("analysis:")
-      # print(head(analysis))
       rawData <- DBI::dbGetQuery(
         conDMW,
         glue::glue_sql(
@@ -263,8 +259,6 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           .con = conDMW
         )
       )
-      # print("rawData:")
-      # print(head(rawData))
       informants <- DBI::dbGetQuery(
         conDMW,
         glue::glue_sql(
@@ -272,10 +266,8 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           .con = conDMW
         )
       )
-      # print("informants:")
-      # print(head(informants))
       mergedData <- rawData |>
-        select(informant_id, subtask_id, rwl, ipa, konfidenzwert, username) |>
+        dplyr::select(informant_id, subtask_id, rwl, ipa, konfidenzwert, username) |>
         dplyr::left_join(informants, by = c("informant_id" = "informant_id")) |>
         dplyr::left_join(
           analysis |> dplyr::select(ipa, rws, category),
@@ -285,34 +277,32 @@ mapServer <- function(id, conAnn, conDMW, user, selectedAnalysis = NULL) {
           category = ifelse(is.na(category), "Unsortiert", category),
           birth_date = as.numeric(birth_date)
         ) |>
-        mutate(
-          Altersklasse = case_when(
+        dplyr::mutate(
+          Altersklasse = dplyr::case_when(
             birth_date - 2026 <= 20 ~ "0-20",
             birth_date - 2026 <= 40 ~ "21-40",
             birth_date - 2026 <= 60 ~ "41-60",
             TRUE ~ "60+"
           )
         )
-      # print("mergedData:")
-      # print(head(mergedData))
       mergedData
     })
 
     shiny::observe({
-      req(analysisData())
-      updateSelectizeInput(
+      shiny::req(analysisData())
+      shiny::updateSelectizeInput(
         session = session,
         "Geschlecht",
         choices = unique(analysisData()$gender),
         selected = unique(analysisData()$gender)
       )
-      updateSelectizeInput(
+      shiny::updateSelectizeInput(
         session = session,
         "Altersklasse",
         choices = unique(analysisData()$Altersklasse),
         selected = unique(analysisData()$Altersklasse)
       )
-      updateSelectizeInput(
+      shiny::updateSelectizeInput(
         session = session,
         "selectedVar",
         choices = unique(analysisData()$category),

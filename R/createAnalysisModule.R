@@ -37,7 +37,7 @@ createAnalysisUI <- function(id) {
       width = "400px",
       # Task selection
       shiny::selectizeInput(
-        NS(id, "task"),
+        shiny::NS(id, "task"),
         label = "Aufgabe auswählen",
         choices = NULL,
         selected = NULL
@@ -46,17 +46,17 @@ createAnalysisUI <- function(id) {
       # Analysis management
       shiny::h6("Analyse verwalten"),
       shiny::actionButton(
-        NS(id, "newAnalysis"),
+        shiny::NS(id, "newAnalysis"),
         label = "Neue Analyse anlegen",
         icon = shiny::icon("plus-circle")
       ),
       shiny::actionButton(
-        NS(id, "loadAnalysis"),
+        shiny::NS(id, "loadAnalysis"),
         label = "Analyse laden",
         icon = shiny::icon("folder-open")
       ),
       shiny::actionButton(
-        NS(id, "deleteAnalysis"),
+        shiny::NS(id, "deleteAnalysis"),
         label = "Analyse löschen",
         icon = shiny::icon("trash")
       ),
@@ -64,7 +64,7 @@ createAnalysisUI <- function(id) {
       # Analysis visibility
       shiny::h6("Sichtbarkeit"),
       shinyWidgets::switchInput(
-        NS(id, "analysisVisible"),
+        shiny::NS(id, "analysisVisible"),
         label = "Für andere sichtbar",
         value = FALSE,
         onStatus = "success",
@@ -73,26 +73,25 @@ createAnalysisUI <- function(id) {
         labelWidth = "80px"
       ),
       shiny::hr(),
-
       shiny::actionButton(
-        NS(id, "addCategory"),
+        shiny::NS(id, "addCategory"),
         label = "Kategorie hinzufügen",
         icon = shiny::icon("plus")
       ),
       shiny::actionButton(
-        NS(id, "renameCategory"),
+        shiny::NS(id, "renameCategory"),
         label = "Kategorie umbenennen",
         icon = shiny::icon("pen")
       ),
       shiny::actionButton(
-        NS(id, "removeCategory"),
+        shiny::NS(id, "removeCategory"),
         label = "Kategorie löschen",
         icon = shiny::icon("trash")
       )
     ),
     # Main content area with cards
     shiny::actionButton(
-      NS(id, "overview"),
+      shiny::NS(id, "overview"),
       label = "Aktualisieren",
       icon = shiny::icon("sync"),
       width = "100%"
@@ -104,7 +103,7 @@ createAnalysisUI <- function(id) {
         icon = bsicons::bs_icon("list-check"),
         class = "h-100",
         style = "overflow: auto;",
-        shiny::uiOutput(NS(id, "categoryOverviewUI")) |>
+        shiny::uiOutput(shiny::NS(id, "categoryOverviewUI")) |>
           shinycssloaders::withSpinner(type = 4)
       ),
       bslib::card(
@@ -115,46 +114,46 @@ createAnalysisUI <- function(id) {
         bslib::card(
           bslib::layout_column_wrap(
             width = 1 / 2,
-            selectizeInput(
-              NS(id, "sortStartCategory"),
+            shiny::selectizeInput(
+              shiny::NS(id, "sortStartCategory"),
               "Quelle",
               choices = ""
             ),
-            selectizeInput(
-              NS(id, "sortEndCategory"),
+            shiny::selectizeInput(
+              shiny::NS(id, "sortEndCategory"),
               "Ziel",
               choices = ""
             )
-          ),
+          )
         ),
         bslib::card(
           title = "Filter",
           min_height = "100px",
           max_height = "150px",
-          h5("Filter"),
+          shiny::h5("Filter"),
           bslib::layout_column_wrap(
             width = NULL,
-            style = css(
+            style = htmltools::css(
               grid_template_columns = "3fr 1fr",
               align_items = "flex-end"
             ),
-            selectizeInput(
-              NS(id, "activeFilters"),
+            shiny::selectizeInput(
+              shiny::NS(id, "activeFilters"),
               "Aktive Filter",
               choices = "",
               multiple = TRUE
             ),
-            actionButton(
-              NS(id, "addFilter"),
+            shiny::actionButton(
+              shiny::NS(id, "addFilter"),
               "Filter hinzufügen",
               icon = shiny::icon("filter")
-            ),
+            )
           )
         ),
         bslib::card(
           class = "flex-fill",
           style = "overflow: auto;",
-          uiOutput(NS(id, "sortBucketUI")) |>
+          shiny::uiOutput(shiny::NS(id, "sortBucketUI")) |>
             shinycssloaders::withSpinner(type = 4)
         )
       )
@@ -219,61 +218,30 @@ createAnalysis <- function(
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     print(user)
-    transcriptions <- reactive(
-      {
-        req(conDMW)
-        req(input$task)
-        transcriptions <- DBI::dbGetQuery(
-          conDMW,
-          glue::glue_sql(
-            "SELECT * FROM Transcription WHERE rwl = {input$task}",
-            .con = conDMW
-          )
+    transcriptions <- shiny::reactive({
+      shiny::req(conDMW)
+      shiny::req(input$task)
+      DBI::dbGetQuery(
+        conDMW,
+        glue::glue_sql(
+          "SELECT * FROM Transcription WHERE rwl = {input$task}",
+          .con = conDMW
         )
-        transcriptions
-      }
-    )
-    selectedAnalysis <- reactiveVal(NULL)
+      )
+    })
 
-    # categories <- shiny::reactivePoll(
-    #   intervalMillis = 1000,
-    #   session = session,
-    #   checkFunc = function() {
-    #     req(conAnn)
-    #     req(selectedAnalysis())
-    #     last_update <- DBI::dbGetQuery(
-    #       conAnn,
-    #       glue::glue_sql(
-    #         "SELECT MAX(updated_at) AS last_update FROM mapAnalysisCategory WHERE analysis_id = {selectedAnalysis()}",
-    #         .con = conAnn
-    #       )
-    #     )$last_update
-    #     last_update
-    #   },
-    #   valueFunc = function() {
-    #     req(conAnn)
-    #     req(selectedAnalysis())
-    #     categories <- DBI::dbGetQuery(
-    #       conAnn,
-    #       glue::glue_sql(
-    #         "SELECT category_name FROM mapAnalysisCategory WHERE analysis_id = {selectedAnalysis()}",
-    #         .con = conAnn
-    #       )
-    #     )$category_name
-    #     categories
-    #   }
-    # )
-    categories <- reactive({
-      req(conAnn)
-      req(selectedAnalysis())
-      categories <- DBI::dbGetQuery(
+    selectedAnalysis <- shiny::reactiveVal(NULL)
+
+    categories <- shiny::reactive({
+      shiny::req(conAnn)
+      shiny::req(selectedAnalysis())
+      DBI::dbGetQuery(
         conAnn,
         glue::glue_sql(
           "SELECT category_name FROM mapAnalysisCategory WHERE analysis_id = {selectedAnalysis()}",
           .con = conAnn
         )
       )$category_name
-      categories
     }) |>
       shiny::bindEvent(c(
         selectedAnalysis(),
@@ -282,9 +250,9 @@ createAnalysis <- function(
         input$confirmRemoveCategory
       ))
 
-    observe({
-      req(conDMW)
-      updateSelectizeInput(
+    shiny::observe({
+      shiny::req(conDMW)
+      shiny::updateSelectizeInput(
         session = session,
         inputId = "task",
         choices = unique(
@@ -299,26 +267,26 @@ createAnalysis <- function(
 
     shiny::bindEvent(
       shiny::observe({
-        req(input$task)
-        showModal(
+        shiny::req(input$task)
+        shiny::showModal(
           shiny::modalDialog(
             title = "Neue Analyse anlegen",
             easyClose = TRUE,
             footer = NULL,
             size = "m",
             shiny::tagList(
-              textInput(NS(id, "analysisName"), "Name der Analyse"),
-              textInput(
-                NS(id, "analysisCategory"),
+              shiny::textInput(shiny::NS(id, "analysisName"), "Name der Analyse"),
+              shiny::textInput(
+                shiny::NS(id, "analysisCategory"),
                 "Kategorie der Analyse (mit Komma getrennt)"
               ),
               shiny::checkboxInput(
-                NS(id, "visibileUser"),
+                shiny::NS(id, "visibileUser"),
                 label = "Für andere Nutzer sichtbar",
                 value = TRUE
               ),
-              actionButton(
-                NS(id, "confirmCreate"),
+              shiny::actionButton(
+                shiny::NS(id, "confirmCreate"),
                 "Erstellen",
                 class = "btn-primary"
               )
@@ -331,21 +299,20 @@ createAnalysis <- function(
 
     shiny::bindEvent(
       shiny::observe({
-        req(input$confirmCreate)
+        shiny::req(input$confirmCreate)
         if (is.null(input$analysisName) || input$analysisName == "") {
-          showNotification(
+          shiny::showNotification(
             "Bitte einen Namen für die Analyse eingeben.",
             type = "error"
           )
           return()
         }
         if (is.null(input$task) || input$task == "") {
-          showNotification("Bitte eine Aufgabe auswählen.", type = "error")
+          shiny::showNotification("Bitte eine Aufgabe auswählen.", type = "error")
           return()
         }
         tryCatch(
           {
-            # Insert new analysis
             DBI::dbBegin(conAnn)
             DBI::dbExecute(
               conAnn,
@@ -355,14 +322,13 @@ createAnalysis <- function(
               )
             )
             DBI::dbCommit(conAnn)
-            # insert categories
             if (
               !is.null(input$analysisCategory) && input$analysisCategory != ""
             ) {
-              categories <- strsplit(input$analysisCategory, ",")[[1]] |>
+              cats <- strsplit(input$analysisCategory, ",")[[1]] |>
                 trimws() |>
                 unique()
-              if (length(categories) == 0) {
+              if (length(cats) == 0) {
                 return()
               }
               analysis_id <- DBI::dbGetQuery(
@@ -373,7 +339,7 @@ createAnalysis <- function(
                 )
               )$id[1]
 
-              for (cat in categories) {
+              for (cat in cats) {
                 DBI::dbBegin(conAnn)
                 DBI::dbExecute(
                   conAnn,
@@ -389,10 +355,8 @@ createAnalysis <- function(
           error = function(e) {
             DBI::dbRollback(conAnn)
             print(e)
-            showNotification(
-              glue::glue(
-                "Fehler beim Erstellen der Analyse: {e$message}"
-              ),
+            shiny::showNotification(
+              glue::glue("Fehler beim Erstellen der Analyse: {e$message}"),
               type = "error"
             )
           },
@@ -405,7 +369,7 @@ createAnalysis <- function(
               )
             )$id[1])
             print(paste("Selected analysis ID:", selectedAnalysis()))
-            removeModal()
+            shiny::removeModal()
           }
         )
       }),
@@ -413,8 +377,8 @@ createAnalysis <- function(
     )
 
     choicesAnalysis <- shiny::bindEvent(
-      reactive({
-        req(conAnn)
+      shiny::reactive({
+        shiny::req(conAnn)
         choices <- DBI::dbGetQuery(
           conAnn,
           glue::glue_sql(
@@ -434,23 +398,23 @@ createAnalysis <- function(
       input$task
     )
 
-    observe({
-      showModal(
+    shiny::observe({
+      shiny::showModal(
         shiny::modalDialog(
           title = "Analyse laden",
           easyClose = TRUE,
           footer = NULL,
           size = "m",
           shiny::tagList(
-            selectizeInput(
-              NS(id, "analysisToLoad"),
+            shiny::selectizeInput(
+              shiny::NS(id, "analysisToLoad"),
               "Analyse auswählen",
               choices = choicesAnalysis()
             ),
             selected = choicesAnalysis()[1]
           ),
-          actionButton(
-            NS(id, "confirmLoad"),
+          shiny::actionButton(
+            shiny::NS(id, "confirmLoad"),
             "Laden",
             class = "btn-primary"
           )
@@ -459,10 +423,10 @@ createAnalysis <- function(
     }) |>
       shiny::bindEvent(input$loadAnalysis)
 
-    observe({
-      req(input$confirmLoad)
+    shiny::observe({
+      shiny::req(input$confirmLoad)
       if (is.null(input$analysisToLoad) || input$analysisToLoad == "") {
-        showNotification(
+        shiny::showNotification(
           "Bitte eine Analyse zum Laden auswählen.",
           type = "error"
         )
@@ -477,7 +441,6 @@ createAnalysis <- function(
       )$id[1]
       selectedAnalysis(analysis_id)
 
-      # Load visibility status
       visibility <- DBI::dbGetQuery(
         conAnn,
         glue::glue_sql(
@@ -493,38 +456,36 @@ createAnalysis <- function(
       )
 
       print(paste("Selected analysis ID:", selectedAnalysis()))
-      removeModal()
+      shiny::removeModal()
     }) |>
       shiny::bindEvent(input$confirmLoad)
 
-    observe({
+    shiny::observe({
       selectedAnalysis(NULL)
-      # Reset sorting selections when task changes
-      updateSelectizeInput(
+      shiny::updateSelectizeInput(
         session = session,
         "sortStartCategory",
         choices = "",
         selected = ""
       )
-      updateSelectizeInput(
+      shiny::updateSelectizeInput(
         session = session,
         "sortEndCategory",
         choices = "",
         selected = ""
       )
-      # Reset visibility switch
       shinyWidgets::updateSwitchInput(
         session = session,
         inputId = "analysisVisible",
         value = FALSE
       )
     }) |>
-      bindEvent(input$task)
+      shiny::bindEvent(input$task)
 
     # Update analysis visibility in database
-    observe({
-      req(selectedAnalysis())
-      req(input$analysisVisible)
+    shiny::observe({
+      shiny::req(selectedAnalysis())
+      shiny::req(input$analysisVisible)
 
       DBI::dbBegin(conAnn)
       DBI::dbExecute(
@@ -536,7 +497,7 @@ createAnalysis <- function(
       )
       DBI::dbCommit(conAnn)
 
-      showNotification(
+      shiny::showNotification(
         if (input$analysisVisible) {
           "Analyse ist jetzt für andere Nutzer sichtbar."
         } else {
@@ -546,16 +507,15 @@ createAnalysis <- function(
         duration = 2
       )
     }) |>
-      bindEvent(input$analysisVisible)
+      shiny::bindEvent(input$analysisVisible)
 
-    observe({
-      output$categoryOverviewUI <- renderUI({
-        req(input$task)
-        # req(selectedAnalysis())
+    shiny::observe({
+      output$categoryOverviewUI <- shiny::renderUI({
+        shiny::req(input$task)
         if (is.null(selectedAnalysis())) {
           return(shiny::p("Keine Analyse ausgewählt."))
         }
-        categories <- c(
+        cats <- c(
           "Unsortiert",
           DBI::dbGetQuery(
             conAnn,
@@ -565,18 +525,17 @@ createAnalysis <- function(
             )
           )$category_name
         )
-        if (length(categories) == 0) {
+        if (length(cats) == 0) {
           return(shiny::p("Keine Kategorien definiert."))
         }
 
-        catBoxes <- lapply(categories, function(cat) {
+        catBoxes <- lapply(cats, function(cat) {
           bslib::card(
             title = cat,
             class = "info",
             min_height = "200px",
             style = "min-width: 300px; resize: both; overflow: auto; flex-shrink: 0;",
-            p(paste("Kategorie:", cat)),
-            # hier die werte der jeweiligen Kategorie einfügen, z.B. als Tabelle oder Liste
+            shiny::p(paste("Kategorie:", cat)),
             shiny::renderUI({
               items <- if (cat == "Unsortiert") {
                 transcriptions() |>
@@ -597,8 +556,8 @@ createAnalysis <- function(
                 DBI::dbGetQuery(
                   conAnn,
                   glue::glue_sql(
-                    "SELECT ipa FROM mapAnalysisAnalysis 
-                WHERE analysis_id={selectedAnalysis()} AND rws={input$task} AND category = {cat}",
+                    "SELECT ipa FROM mapAnalysisAnalysis
+                    WHERE analysis_id={selectedAnalysis()} AND rws={input$task} AND category = {cat}",
                     .con = conAnn
                   )
                 )$ipa
@@ -610,7 +569,6 @@ createAnalysis <- function(
                   style = "color: #999; font-style: italic;"
                 )
               } else {
-                # Display items as formatted badges
                 item_badges <- lapply(items, function(item) {
                   shiny::span(
                     item,
@@ -626,7 +584,7 @@ createAnalysis <- function(
           )
         })
         bslib::layout_column_wrap(
-          width = 1 / length(categories),
+          width = 1 / length(cats),
           !!!catBoxes
         )
       })
@@ -635,9 +593,9 @@ createAnalysis <- function(
 
     ## manuelle Sortierung
 
-    observe({
-      req(selectedAnalysis())
-      categories <- DBI::dbGetQuery(
+    shiny::observe({
+      shiny::req(selectedAnalysis())
+      cats <- DBI::dbGetQuery(
         conAnn,
         glue::glue_sql(
           "SELECT category_name FROM mapAnalysisCategory WHERE analysis_id = {selectedAnalysis()}",
@@ -645,31 +603,30 @@ createAnalysis <- function(
         )
       )$category_name
 
-      # Always include "Unsortiert" as first option
-      categories <- c("Unsortiert", categories)
+      cats <- c("Unsortiert", cats)
 
-      updateSelectizeInput(
+      shiny::updateSelectizeInput(
         session = session,
         "sortStartCategory",
-        choices = categories,
-        selected = categories[1]
+        choices = cats,
+        selected = cats[1]
       )
-      updateSelectizeInput(
+      shiny::updateSelectizeInput(
         session = session,
         "sortEndCategory",
-        choices = categories,
-        selected = if (length(categories) > 1) categories[2] else categories[1]
+        choices = cats,
+        selected = if (length(cats) > 1) cats[2] else cats[1]
       )
     }) |>
       shiny::bindEvent(selectedAnalysis())
 
-    observe({
-      output$sortBucketUI <- renderUI({
-        req(input$sortStartCategory)
-        req(input$sortEndCategory)
-        req(selectedAnalysis())
+    shiny::observe({
+      output$sortBucketUI <- shiny::renderUI({
+        shiny::req(input$sortStartCategory)
+        shiny::req(input$sortEndCategory)
+        shiny::req(selectedAnalysis())
         if (input$sortStartCategory == input$sortEndCategory) {
-          return(p("Bitte unterschiedliche Kategorien auswählen."))
+          return(shiny::p("Bitte unterschiedliche Kategorien auswählen."))
         }
         labels_unsorted <- if (input$sortStartCategory == "Unsortiert") {
           transcriptions() |>
@@ -690,7 +647,7 @@ createAnalysis <- function(
           DBI::dbGetQuery(
             conAnn,
             glue::glue_sql(
-              "SELECT ipa FROM mapAnalysisAnalysis 
+              "SELECT ipa FROM mapAnalysisAnalysis
               WHERE analysis_id={selectedAnalysis()} AND category = {input$sortStartCategory}",
               .con = conAnn
             )
@@ -705,20 +662,19 @@ createAnalysis <- function(
         }
         sortable::bucket_list(
           header = "Sortieren durch Ziehen und Ablegen",
-          # id = NS(id, "sortBuckets"),
           group_name = "sortGroup",
           orientation = "horizontal",
-          add_rank_list(
+          sortable::add_rank_list(
             text = input$sortStartCategory,
             labels = labels_unsorted,
-            options = sortable_options(
+            options = sortable::sortable_options(
               multiDrag = TRUE,
               animation = 0,
               sort = FALSE
             ),
-            input_id = NS(id, "sortStartBucket")
+            input_id = shiny::NS(id, "sortStartBucket")
           ),
-          add_rank_list(
+          sortable::add_rank_list(
             text = input$sortEndCategory,
             labels = if (input$sortEndCategory == "Unsortiert") {
               transcriptions() |>
@@ -728,7 +684,7 @@ createAnalysis <- function(
                       conAnn,
                       glue::glue_sql(
                         "SELECT ipa FROM mapAnalysisAnalysis
-                    WHERE analysis_id={selectedAnalysis()}",
+                        WHERE analysis_id={selectedAnalysis()}",
                         .con = conAnn
                       )
                     )$ipa
@@ -739,18 +695,18 @@ createAnalysis <- function(
               DBI::dbGetQuery(
                 conAnn,
                 glue::glue_sql(
-                  "SELECT ipa FROM mapAnalysisAnalysis 
-              WHERE analysis_id={selectedAnalysis()} AND rws={input$task} AND category = {input$sortEndCategory}",
+                  "SELECT ipa FROM mapAnalysisAnalysis
+                  WHERE analysis_id={selectedAnalysis()} AND rws={input$task} AND category = {input$sortEndCategory}",
                   .con = conAnn
                 )
               )$ipa
             },
-            options = sortable_options(
+            options = sortable::sortable_options(
               multiDrag = TRUE,
               animation = 0,
               sort = FALSE
             ),
-            input_id = NS(id, "sortEndBucket")
+            input_id = shiny::NS(id, "sortEndBucket")
           )
         )
       })
@@ -763,17 +719,16 @@ createAnalysis <- function(
         input$activeFilters
       ))
 
-    observe({
-      req(input$sortStartBucket)
-      req(selectedAnalysis())
-      req(input$task)
-      ## speichern der Sortierung in der Datenbank
+    shiny::observe({
+      shiny::req(input$sortStartBucket)
+      shiny::req(selectedAnalysis())
+      shiny::req(input$task)
       if (input$sortStartCategory == "Unsortiert") {
         itemsToDelete <- DBI::dbGetQuery(
           conAnn,
           glue::glue_sql(
-            "SELECT id FROM mapAnalysisAnalysis 
-          WHERE analysis_id={selectedAnalysis()} AND rws={input$task} AND ipa IN ({input$sortStartBucket*})",
+            "SELECT id FROM mapAnalysisAnalysis
+            WHERE analysis_id={selectedAnalysis()} AND rws={input$task} AND ipa IN ({input$sortStartBucket*})",
             .con = conAnn
           )
         ) |>
@@ -795,10 +750,9 @@ createAnalysis <- function(
           DBI::dbExecute(
             conAnn,
             glue::glue_sql(
-              "INSERT INTO mapAnalysisAnalysis (analysis_id, rws, ipa, category, changed_by) 
+              "INSERT INTO mapAnalysisAnalysis (analysis_id, rws, ipa, category, changed_by)
               VALUES ({selectedAnalysis()}, {input$task}, {item}, {input$sortStartCategory}, {user})
-              ON DUPLICATE KEY UPDATE category = {input$sortStartCategory}, changed_by = {user}
-              ",
+              ON DUPLICATE KEY UPDATE category = {input$sortStartCategory}, changed_by = {user}",
               .con = conAnn
             )
           )
@@ -808,18 +762,16 @@ createAnalysis <- function(
     }) |>
       shiny::bindEvent(input$sortStartBucket)
 
-    observe({
-      req(input$sortEndBucket)
-      req(selectedAnalysis())
-      req(input$task)
-
-      ## speichern der Sortierung in der Datenbank
+    shiny::observe({
+      shiny::req(input$sortEndBucket)
+      shiny::req(selectedAnalysis())
+      shiny::req(input$task)
       if (input$sortEndCategory == "Unsortiert") {
         itemsToDelete <- DBI::dbGetQuery(
           conAnn,
           glue::glue_sql(
-            "SELECT id FROM mapAnalysisAnalysis 
-          WHERE analysis_id={selectedAnalysis()} AND rws={input$task} AND ipa IN ({input$sortEndBucket*})",
+            "SELECT id FROM mapAnalysisAnalysis
+            WHERE analysis_id={selectedAnalysis()} AND rws={input$task} AND ipa IN ({input$sortEndBucket*})",
             .con = conAnn
           )
         ) |>
@@ -841,10 +793,9 @@ createAnalysis <- function(
           DBI::dbExecute(
             conAnn,
             glue::glue_sql(
-              "INSERT INTO mapAnalysisAnalysis (analysis_id, rws, ipa, category, changed_by) 
+              "INSERT INTO mapAnalysisAnalysis (analysis_id, rws, ipa, category, changed_by)
               VALUES ({selectedAnalysis()}, {input$task}, {item}, {input$sortEndCategory}, {user})
-              ON DUPLICATE KEY UPDATE category = {input$sortEndCategory}, changed_by = {user}
-              ",
+              ON DUPLICATE KEY UPDATE category = {input$sortEndCategory}, changed_by = {user}",
               .con = conAnn
             )
           )
@@ -856,17 +807,17 @@ createAnalysis <- function(
 
     # Add category modal
     shiny::observe({
-      req(selectedAnalysis())
-      showModal(
+      shiny::req(selectedAnalysis())
+      shiny::showModal(
         shiny::modalDialog(
           title = "Kategorie hinzufügen",
           easyClose = TRUE,
           footer = NULL,
           size = "m",
           shiny::tagList(
-            textInput(NS(id, "newCategoryName"), "Kategoriename"),
-            actionButton(
-              NS(id, "confirmAddCategory"),
+            shiny::textInput(shiny::NS(id, "newCategoryName"), "Kategoriename"),
+            shiny::actionButton(
+              shiny::NS(id, "confirmAddCategory"),
               "Hinzufügen",
               class = "btn-primary"
             )
@@ -878,8 +829,8 @@ createAnalysis <- function(
 
     # Rename category modal
     shiny::observe({
-      req(selectedAnalysis())
-      categories <- DBI::dbGetQuery(
+      shiny::req(selectedAnalysis())
+      cats <- DBI::dbGetQuery(
         conAnn,
         glue::glue_sql(
           "SELECT category_name FROM mapAnalysisCategory WHERE analysis_id = {selectedAnalysis()}",
@@ -887,21 +838,21 @@ createAnalysis <- function(
         )
       )$category_name
 
-      showModal(
+      shiny::showModal(
         shiny::modalDialog(
           title = "Kategorie umbenennen",
           easyClose = TRUE,
           footer = NULL,
           size = "m",
           shiny::tagList(
-            selectizeInput(
-              NS(id, "categoryToRename"),
+            shiny::selectizeInput(
+              shiny::NS(id, "categoryToRename"),
               "Kategorie auswählen",
-              choices = categories
+              choices = cats
             ),
-            textInput(NS(id, "newRenameCategoryName"), "Neuer Name"),
-            actionButton(
-              NS(id, "confirmRenameCategory"),
+            shiny::textInput(shiny::NS(id, "newRenameCategoryName"), "Neuer Name"),
+            shiny::actionButton(
+              shiny::NS(id, "confirmRenameCategory"),
               "Umbenennen",
               class = "btn-primary"
             )
@@ -913,8 +864,8 @@ createAnalysis <- function(
 
     # Remove category modal
     shiny::observe({
-      req(selectedAnalysis())
-      categories <- DBI::dbGetQuery(
+      shiny::req(selectedAnalysis())
+      cats <- DBI::dbGetQuery(
         conAnn,
         glue::glue_sql(
           "SELECT category_name FROM mapAnalysisCategory WHERE analysis_id = {selectedAnalysis()}",
@@ -922,21 +873,21 @@ createAnalysis <- function(
         )
       )$category_name
 
-      showModal(
+      shiny::showModal(
         shiny::modalDialog(
           title = "Kategorie löschen",
           easyClose = TRUE,
           footer = NULL,
           size = "m",
           shiny::tagList(
-            selectizeInput(
-              NS(id, "categoryToRemove"),
+            shiny::selectizeInput(
+              shiny::NS(id, "categoryToRemove"),
               "Kategorie auswählen",
-              choices = categories
+              choices = cats
             ),
-            p("Warnung: Diese Aktion kann nicht rückgängig gemacht werden."),
-            actionButton(
-              NS(id, "confirmRemoveCategory"),
+            shiny::p("Warnung: Diese Aktion kann nicht rückgängig gemacht werden."),
+            shiny::actionButton(
+              shiny::NS(id, "confirmRemoveCategory"),
               "Löschen",
               class = "btn-danger"
             )
@@ -947,10 +898,10 @@ createAnalysis <- function(
       shiny::bindEvent(input$removeCategory)
 
     # Add category handler
-    observe({
-      req(input$confirmAddCategory)
+    shiny::observe({
+      shiny::req(input$confirmAddCategory)
       if (is.null(input$newCategoryName) || input$newCategoryName == "") {
-        showNotification(
+        shiny::showNotification(
           "Bitte einen Kategorienamen eingeben.",
           type = "error"
         )
@@ -958,11 +909,11 @@ createAnalysis <- function(
       }
       tryCatch(
         {
-          categories <- strsplit(input$newCategoryName, ",")[[1]] |>
+          cats <- strsplit(input$newCategoryName, ",")[[1]] |>
             trimws() |>
             unique()
 
-          for (cat in categories) {
+          for (cat in cats) {
             DBI::dbBegin(conAnn)
             DBI::dbExecute(
               conAnn,
@@ -974,40 +925,40 @@ createAnalysis <- function(
             DBI::dbCommit(conAnn)
           }
 
-          showNotification(
+          shiny::showNotification(
             glue::glue("Kategorie(n) erfolgreich hinzugefügt."),
             type = "message"
           )
         },
         error = function(e) {
           DBI::dbRollback(conAnn)
-          showNotification(
+          shiny::showNotification(
             glue::glue("Fehler beim Hinzufügen der Kategorie: {e$message}"),
             type = "error"
           )
         },
         finally = {
-          removeModal()
+          shiny::removeModal()
         }
       )
     }) |>
-      bindEvent(input$confirmAddCategory)
+      shiny::bindEvent(input$confirmAddCategory)
 
     # Rename category handler
-    observe({
-      req(input$confirmRenameCategory)
+    shiny::observe({
+      shiny::req(input$confirmRenameCategory)
       if (
         is.null(input$newRenameCategoryName) ||
           input$newRenameCategoryName == ""
       ) {
-        showNotification(
+        shiny::showNotification(
           "Bitte einen neuen Kategorienamen eingeben.",
           type = "error"
         )
         return()
       }
       if (is.null(input$categoryToRename) || input$categoryToRename == "") {
-        showNotification(
+        shiny::showNotification(
           "Bitte eine Kategorie auswählen.",
           type = "error"
         )
@@ -1025,7 +976,6 @@ createAnalysis <- function(
           )
           DBI::dbCommit(conAnn)
 
-          # Also update references in mapAnalysisAnalysis table
           DBI::dbBegin(conAnn)
           DBI::dbExecute(
             conAnn,
@@ -1036,30 +986,30 @@ createAnalysis <- function(
           )
           DBI::dbCommit(conAnn)
 
-          showNotification(
+          shiny::showNotification(
             glue::glue("Kategorie erfolgreich umbenannt."),
             type = "message"
           )
         },
         error = function(e) {
           DBI::dbRollback(conAnn)
-          showNotification(
+          shiny::showNotification(
             glue::glue("Fehler beim Umbenennen der Kategorie: {e$message}"),
             type = "error"
           )
         },
         finally = {
-          removeModal()
+          shiny::removeModal()
         }
       )
     }) |>
-      bindEvent(input$confirmRenameCategory)
+      shiny::bindEvent(input$confirmRenameCategory)
 
     # Remove category handler
-    observe({
-      req(input$confirmRemoveCategory)
+    shiny::observe({
+      shiny::req(input$confirmRemoveCategory)
       if (is.null(input$categoryToRemove) || input$categoryToRemove == "") {
-        showNotification(
+        shiny::showNotification(
           "Bitte eine Kategorie auswählen.",
           type = "error"
         )
@@ -1067,7 +1017,6 @@ createAnalysis <- function(
       }
       tryCatch(
         {
-          # Delete from mapAnalysisAnalysis first (foreign key)
           DBI::dbBegin(conAnn)
           DBI::dbExecute(
             conAnn,
@@ -1078,7 +1027,6 @@ createAnalysis <- function(
           )
           DBI::dbCommit(conAnn)
 
-          # Then delete from mapAnalysisCategory
           DBI::dbBegin(conAnn)
           DBI::dbExecute(
             conAnn,
@@ -1088,64 +1036,63 @@ createAnalysis <- function(
             )
           )
           DBI::dbCommit(conAnn)
-          showNotification(
+          shiny::showNotification(
             glue::glue("Kategorie erfolgreich gelöscht."),
             type = "message"
           )
         },
         error = function(e) {
           DBI::dbRollback(conAnn)
-          showNotification(
+          shiny::showNotification(
             glue::glue("Fehler beim Löschen der Kategorie: {e$message}"),
             type = "error"
           )
         },
         finally = {
-          removeModal()
+          shiny::removeModal()
         }
       )
     }) |>
-      bindEvent(input$confirmRemoveCategory)
+      shiny::bindEvent(input$confirmRemoveCategory)
 
-    observe({
-      req(categories())
-      # Include "Unsortiert" as first option
-      categories_with_unsorted <- c("Unsortiert", categories())
+    shiny::observe({
+      shiny::req(categories())
+      cats_with_unsorted <- c("Unsortiert", categories())
 
       shiny::updateSelectizeInput(
         "sortStartCategory",
-        choices = categories_with_unsorted,
+        choices = cats_with_unsorted,
         selected = input$sortStartCategory,
         session = session
       )
       shiny::updateSelectizeInput(
         "sortEndCategory",
-        choices = categories_with_unsorted,
+        choices = cats_with_unsorted,
         selected = input$sortEndCategory,
         session = session
       )
     }) |>
-      bindEvent(categories())
+      shiny::bindEvent(categories())
 
-    observe({
-      req(input$addFilter)
-      req(selectedAnalysis())
-      showModal(
+    shiny::observe({
+      shiny::req(input$addFilter)
+      shiny::req(selectedAnalysis())
+      shiny::showModal(
         shiny::modalDialog(
           title = "Filter hinzufügen",
           easyClose = TRUE,
           footer = NULL,
           size = "l",
           shiny::tagList(
-            textInput(
-              NS(id, "FilterName"),
+            shiny::textInput(
+              shiny::NS(id, "FilterName"),
               "Filtername"
             ),
             bslib::layout_column_wrap(
               width = NULL,
-              style = css(grid_template_columns = "2fr 2fr 2fr 1fr"),
-              selectizeInput(
-                NS(id, "Silbe"),
+              style = htmltools::css(grid_template_columns = "2fr 2fr 2fr 1fr"),
+              shiny::selectizeInput(
+                shiny::NS(id, "Silbe"),
                 "Silbe",
                 choices = c(
                   "Erste Silbe",
@@ -1155,27 +1102,27 @@ createAnalysis <- function(
                   "Alle Silben"
                 ),
                 selected = "Alle Silben",
-                multiple = FALSE,
+                multiple = FALSE
               ),
-              selectizeInput(
-                NS(id, "FilterOperator"),
+              shiny::selectizeInput(
+                shiny::NS(id, "FilterOperator"),
                 "Operator",
                 choices = c("beginnt mit", "endet mit", "enthält"),
                 selected = "enthält",
                 multiple = FALSE
               ),
-              textInput(
-                NS(id, "FilterValue"),
+              shiny::textInput(
+                shiny::NS(id, "FilterValue"),
                 "Wert"
               ),
-              actionButton(
-                NS(id, "IPAHelper"),
+              shiny::actionButton(
+                shiny::NS(id, "IPAHelper"),
                 "IPA-Hilfe",
                 icon = shiny::icon("question-circle")
               )
             ),
-            actionButton(
-              NS(id, "confirmAddFilter"),
+            shiny::actionButton(
+              shiny::NS(id, "confirmAddFilter"),
               "Hinzufügen",
               class = "btn-primary"
             )
@@ -1183,14 +1130,14 @@ createAnalysis <- function(
         )
       )
     }) |>
-      bindEvent(c(input$addFilter))
+      shiny::bindEvent(input$addFilter)
 
-    observe({
+    shiny::observe({
       shiny::browseURL("https://ipa.typeit.org/full/")
     }) |>
       shiny::bindEvent(input$IPAHelper)
 
-    filters <- reactiveVal(data.frame(
+    filters <- shiny::reactiveVal(data.frame(
       name = character(),
       silbe = character(),
       operator = character(),
@@ -1198,17 +1145,17 @@ createAnalysis <- function(
       stringsAsFactors = FALSE
     ))
 
-    observe({
-      req(input$confirmAddFilter)
+    shiny::observe({
+      shiny::req(input$confirmAddFilter)
       if (is.null(input$FilterName) || input$FilterName == "") {
-        showNotification(
+        shiny::showNotification(
           "Bitte einen Namen für den Filter eingeben.",
           type = "error"
         )
         return()
       }
       if (is.null(input$FilterValue) || input$FilterValue == "") {
-        showNotification(
+        shiny::showNotification(
           "Bitte einen Wert für den Filter eingeben.",
           type = "error"
         )
@@ -1220,19 +1167,17 @@ createAnalysis <- function(
         operator = input$FilterOperator,
         value = input$FilterValue
       )
-      # Hier müsste der neue Filter in einer reaktiven Variable oder Datenbanktabelle gespeichert werden, damit er in der App verwendet werden kann.
       filters(rbind(filters(), newFilter))
-      # print(filters())
-      showNotification(
+      shiny::showNotification(
         glue::glue("Filter '{input$FilterName}' erfolgreich hinzugefügt."),
         type = "message"
       )
-      removeModal()
+      shiny::removeModal()
     }) |>
-      bindEvent(input$confirmAddFilter)
+      shiny::bindEvent(input$confirmAddFilter)
 
-    observe({
-      updateSelectizeInput(
+    shiny::observe({
+      shiny::updateSelectizeInput(
         session = session,
         "activeFilters",
         choices = filters()$name,
