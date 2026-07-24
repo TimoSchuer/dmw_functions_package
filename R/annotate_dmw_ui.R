@@ -34,20 +34,6 @@
 #' }
 annotateDmwUI <- function(id, min_height = "200px", class = NULL) {
   bslib::card(
-    bslib::card_header(
-      class = "card-header-annotate",
-      layout_column_wrap(
-        width = NULL,
-        style = htmltools::css(grid_template_columns = "auto 1fr"),
-        shiny::tags$img(
-          src = "CD/Logos DMW/logo.png",
-          height = "40px",
-          style = "padding: 0px 10px;"
-        ),
-
-        h2("Annotationstool (Syntax und Morphologie)")
-      )
-    ),
     min_height = min_height,
     class = class,
     bslib::layout_sidebar(
