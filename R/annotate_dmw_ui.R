@@ -137,59 +137,80 @@ annotateDmwUI <- function(id, min_height = "200px", class = NULL) {
             style = "display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px;",
             shiny::actionButton(
               shiny::NS(id, "previousItem"),
-              label = "", icon = shiny::icon("backward-fast"),
-              style = "flex: 1 1 20%;", disabled = TRUE
-            ) |> bslib::tooltip("Vorheriges Item (mit Speichern)", placement = "top"),
-            shiny::actionButton(
-              shiny::NS(id, "previousCategory"),
-              label = "", icon = shiny::icon("backward-step"),
-              style = "flex: 1 1 20%;", disabled = TRUE
-            ) |> bslib::tooltip("Vorherige Kategorie (mit Speichern)", placement = "top"),
-            shiny::actionButton(
-              shiny::NS(id, "nextCategory"),
-              label = "", icon = shiny::icon("forward-step"),
-              style = "flex: 1 1 20%;", disabled = TRUE
-            ) |> bslib::tooltip("Nächste Kategorie (mit Speichern)", placement = "top"),
+              label = "",
+              icon = shiny::icon("backward-fast"),
+              style = "flex: 1 1 20%;",
+              disabled = TRUE
+            ) |>
+              bslib::tooltip(
+                "Vorheriges Item (mit Speichern)",
+                placement = "top"
+              ),
+            # shiny::actionButton(
+            #   shiny::NS(id, "previousCategory"),
+            #   label = "", icon = shiny::icon("backward-step"),
+            #   style = "flex: 1 1 20%;", disabled = TRUE
+            # ) |> bslib::tooltip("Vorherige Kategorie (mit Speichern)", placement = "top"),
+            # shiny::actionButton(
+            #   shiny::NS(id, "nextCategory"),
+            #   label = "", icon = shiny::icon("forward-step"),
+            #   style = "flex: 1 1 20%;", disabled = TRUE
+            # ) |> bslib::tooltip("Nächste Kategorie (mit Speichern)", placement = "top"),
             shiny::actionButton(
               shiny::NS(id, "nextItem"),
-              label = "", icon = shiny::icon("forward-fast"),
+              label = "",
+              icon = shiny::icon("forward-fast"),
               style = "flex: 1 1 20%;"
-            ) |> bslib::tooltip("Nächstes Item (mit Speichern)", placement = "top")
+            ) |>
+              bslib::tooltip("Nächstes Item (mit Speichern)", placement = "top")
           ),
           shiny::div(
             style = "display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;",
             shiny::actionButton(
               shiny::NS(id, "previousItemNoSave"),
-              label = "", icon = shiny::icon("angles-left"),
-              style = "flex: 1 1 20%;", disabled = TRUE,
+              label = "",
+              icon = shiny::icon("angles-left"),
+              style = "flex: 1 1 20%;",
+              disabled = TRUE,
               class = "btn-outline-secondary"
-            ) |> bslib::tooltip("Vorheriges Item (ohne Speichern)", placement = "top"),
-            shiny::actionButton(
-              shiny::NS(id, "previousCategoryNoSave"),
-              label = "", icon = shiny::icon("angle-left"),
-              style = "flex: 1 1 20%;", disabled = TRUE,
-              class = "btn-outline-secondary"
-            ) |> bslib::tooltip("Vorherige Kategorie (ohne Speichern)", placement = "top"),
-            shiny::actionButton(
-              shiny::NS(id, "nextCategoryNoSave"),
-              label = "", icon = shiny::icon("angle-right"),
-              style = "flex: 1 1 20%;", disabled = TRUE,
-              class = "btn-outline-secondary"
-            ) |> bslib::tooltip("Nächste Kategorie (ohne Speichern)", placement = "top"),
+            ) |>
+              bslib::tooltip(
+                "Vorheriges Item (ohne Speichern)",
+                placement = "top"
+              ),
+            # shiny::actionButton(
+            #   shiny::NS(id, "previousCategoryNoSave"),
+            #   label = "", icon = shiny::icon("angle-left"),
+            #   style = "flex: 1 1 20%;", disabled = TRUE,
+            #   class = "btn-outline-secondary"
+            # ) |> bslib::tooltip("Vorherige Kategorie (ohne Speichern)", placement = "top"),
+            # shiny::actionButton(
+            #   shiny::NS(id, "nextCategoryNoSave"),
+            #   label = "", icon = shiny::icon("angle-right"),
+            #   style = "flex: 1 1 20%;", disabled = TRUE,
+            #   class = "btn-outline-secondary"
+            # ) |> bslib::tooltip("Nächste Kategorie (ohne Speichern)", placement = "top"),
             shiny::actionButton(
               shiny::NS(id, "nextItemNoSave"),
-              label = "", icon = shiny::icon("angles-right"),
+              label = "",
+              icon = shiny::icon("angles-right"),
               style = "flex: 1 1 20%;",
               class = "btn-outline-secondary"
-            ) |> bslib::tooltip("Nächstes Item (ohne Speichern)", placement = "top")
+            ) |>
+              bslib::tooltip(
+                "Nächstes Item (ohne Speichern)",
+                placement = "top"
+              )
           ),
           shiny::uiOutput(shiny::NS(id, "comment")),
           shiny::div(
             style = "display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px;",
             shiny::actionButton(
               shiny::NS(id, "addComment"),
-              label = "", icon = shiny::icon("comment-dots")
-            ) |> bslib::tooltip("Kommentar hinzufügen", placement = "top"),
+              label = "",
+              icon = shiny::icon("comment-dots")
+            ) |>
+              bslib::tooltip("Kommentar hinzufügen", placement = "top"),
             bslib::input_switch(
               shiny::NS(id, "unclear"),
               label = "Zweifelsfall",
@@ -205,7 +226,8 @@ annotateDmwUI <- function(id, min_height = "200px", class = NULL) {
         bslib::card(
           shiny::actionButton(
             shiny::NS(id, "showInfo"),
-            label = "", icon = shiny::icon("info-circle"),
+            label = "",
+            icon = shiny::icon("info-circle"),
             width = "100%"
           ),
           shiny::actionButton(
