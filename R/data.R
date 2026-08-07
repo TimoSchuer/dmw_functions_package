@@ -54,3 +54,48 @@ NULL
 
 #' @rdname geodata
 "Wenkerorte"
+
+#' Voronoi-Zerlegungen der Wenker-Orte
+#'
+#' Diese Datensätze enthalten Voronoi-Polygone (sf-Objekte), die aus den
+#' Wenker-Orte-Punkten der jeweiligen Region erzeugt wurden. Jedes Polygon
+#' trägt die Attribute des nächstgelegenen Wenker-Ortes.
+#'
+#' @format Ein sf-Objekt (simple features) mit Polygon-Geometrien.
+#'
+#' @details
+#' - `WenkerOrte_Bonn_Voronoi`: Voronoi-Zerlegung der Wenker-Orte im Raum Bonn
+#' - `WenkerOrte_Muenster_Voronoi`: Voronoi-Zerlegung der Wenker-Orte im Raum Münster
+#' - `WenkerOrte_Paderborn_Voronoi`: Voronoi-Zerlegung der Wenker-Orte im Raum Paderborn
+#' - `WenkerOrte_Siegen_Voronoi`: Voronoi-Zerlegung der Wenker-Orte im Raum Siegen
+#' - `Wenkerorte_Voronoi`: Kombinierte Voronoi-Zerlegung aller Wenker-Orte
+#'
+#' @source Erzeugt aus den Wenker-Orte-Punktdaten mittels `sf::st_voronoi()`,
+#' siehe `data-raw/create_voronoi.R`.
+#'
+#' @name voronoi
+#' @docType data
+#' @keywords datasets
+#'
+#' @examples
+#' \dontrun{
+#'   library(sf)
+#'   plot(WenkerOrte_Bonn_Voronoi)
+#' }
+#'
+NULL
+
+#' @rdname voronoi
+"WenkerOrte_Bonn_Voronoi"
+
+#' @rdname voronoi
+"WenkerOrte_Muenster_Voronoi"
+
+#' @rdname voronoi
+"WenkerOrte_Paderborn_Voronoi"
+
+#' @rdname voronoi
+"WenkerOrte_Siegen_Voronoi"
+
+#' @rdname voronoi
+"Wenkerorte_Voronoi"
